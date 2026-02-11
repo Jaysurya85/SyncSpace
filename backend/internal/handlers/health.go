@@ -1,19 +1,43 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// HealthCheckHandler handles health check requests
-func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
+type HealthHandler struct {
+	DB *pgxpool.Pool
 }
 
-// RootHandler handles root endpoint requests
-func RootHandler(w http.ResponseWriter, r *http.Request) {
+func NewHealthHandler(db *pgxpool.Pool) *HealthHandler {
+	return &HealthHandler{DB: db}
+}
+
+func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	type resp struct {
+		Status string `json:"status"`
+		DB     string `json:"db,omitempty"`
+	}
+
+	out := resp{Status: "ok"}
+
+	// If DB is available, try a quick ping.
+	if h.DB != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 700*time.Millisecond)
+		defer cancel()
+
+		if err := h.DB.Ping(ctx); err != nil {
+			out.Status = "degraded"
+			out.DB = "down"
+		} else {
+			out.DB = "up"
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message":"Welcome to SyncSpace API"}`))
+	_ = json.NewEncoder(w).Encode(out)
 }
