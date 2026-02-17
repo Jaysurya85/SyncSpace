@@ -4,17 +4,29 @@ Go backend for the SyncSpace collaboration platform.
 
 ## Getting Started
 
-### Prerequisites
-- Go 1.21 or higher
+## Prerequisites
 
-### Running the Server
+- Go 1.21+
+- Docker
+
+## Run the Application
+
+1. **Start Database:**
 ```bash
-go run cmd/server/main.go
+   docker compose up -d
 ```
 
-The server will start on port 8080.
+2. **Run Backend:**
+```bash
+   cd backend
+   go run cmd/server/main.go
+```
 
-### API Endpoints
+3. **Test:**
+   - Health: `curl http://localhost:8080/health`
+   - Swagger: `http://localhost:8080/swagger/index.html`
 
-- `GET /` - Welcome message
-- `GET /health` - Health check
+## Stop
+```bash
+docker compose down
+```

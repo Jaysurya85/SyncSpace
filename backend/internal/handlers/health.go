@@ -13,19 +13,26 @@ type HealthHandler struct {
 	DB *pgxpool.Pool
 }
 
+// HealthResponse represents the health check response
+type HealthResponse struct {
+	Status string `json:"status" example:"ok"`
+	DB     string `json:"db,omitempty" example:"up"`
+}
+
 func NewHealthHandler(db *pgxpool.Pool) *HealthHandler {
 	return &HealthHandler{DB: db}
 }
 
+// ServeHTTP handles health check requests
+// @Summary      Health Check
+// @Description  Check if the API and database are healthy
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  HealthResponse
+// @Router       /health [get]
 func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	type resp struct {
-		Status string `json:"status"`
-		DB     string `json:"db,omitempty"`
-	}
+	out := HealthResponse{Status: "ok"}
 
-	out := resp{Status: "ok"}
-
-	// If DB is available, try a quick ping.
 	if h.DB != nil {
 		ctx, cancel := context.WithTimeout(r.Context(), 700*time.Millisecond)
 		defer cancel()
