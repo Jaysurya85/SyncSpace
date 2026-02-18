@@ -1,7 +1,7 @@
 import AuthCard from "../components/AuthCard";
-import LoginForm from "../components/LoginForm";
+import SignUpForm from "../components/SignupForm";
 
-const LoginPage = () => {
+const SignUpPage = () => {
 	return (
 		<div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
 
@@ -15,15 +15,16 @@ const LoginPage = () => {
 			</div>
 
 			<AuthCard>
-				<LoginForm />
+				<SignUpForm />
 			</AuthCard>
 
 			<p className="mt-6 text-sm text-text-secondary">
-				Don’t have an account?{" "}
+				Already have an account?{" "}
 				<span
-					onClick={() => window.location.href = "/signup"}
-					className="text-primary hover:underline cursor-pointer">
-					Sign up
+					onClick={() => window.location.href = "/"}
+					className="text-primary hover:underline cursor-pointer"
+				>
+					Login
 				</span>
 			</p>
 
@@ -31,4 +32,4 @@ const LoginPage = () => {
 	);
 };
 
-export default LoginPage;
+export default SignUpPage;

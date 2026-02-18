@@ -1,0 +1,38 @@
+basePath: /
+definitions:
+  handlers.HealthResponse:
+    properties:
+      db:
+        example: up
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@syncspace.com
+    name: API Support
+  description: Real-time collaboration platform API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: SyncSpace API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Check if the API and database are healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+      summary: Health Check
+      tags:
+      - health
+swagger: "2.0"
