@@ -1,5 +1,11 @@
 # Sprint 1
 
+All development work is carried out in individual feature branches created by team members. Completed features are merged into the development branch, and once the project is finalized, the development branch is merged into the main branch.
+
+- [Issues page](https://github.com/Jaysurya85/SyncSpace/issues?q=is%3Aissue)
+- [Project Board](https://github.com/users/Jaysurya85/projects/1)
+
+
 ## Completed Work
 
 ### Frontend Infrastructure
@@ -37,3 +43,4 @@
 - [x] [Implement reusable UI components](https://github.com/Jaysurya85/SyncSpace/issues/5)
 - [x] [Implement Sign Up page](https://github.com/Jaysurya85/SyncSpace/issues/10)
 - [x] [Add social login UI placeholder (Google)](https://github.com/Jaysurya85/SyncSpace/issues/5)
+
