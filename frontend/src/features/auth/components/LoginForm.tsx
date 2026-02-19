@@ -3,6 +3,7 @@ import Input from "../../../shared/components/Input";
 import Button from "../../../shared/components/Button";
 import { login } from "../authApi";
 import { useNavigate } from "react-router-dom";
+import SocialLoginButton from "./SocialLoginButtonProps";
 
 const LoginForm: React.FC = () => {
 	const [email, setEmail] = useState("");
@@ -94,6 +95,18 @@ const LoginForm: React.FC = () => {
 			<Button type="submit" fullWidth loading={loading}>
 				Sign in
 			</Button>
+			<div className="flex items-center gap-3">
+				<div className="flex-1 h-px bg-border" />
+				<span className="text-xs text-text-secondary uppercase tracking-wide">
+					OR
+				</span>
+				<div className="flex-1 h-px bg-border" />
+			</div>
+
+			<SocialLoginButton
+				provider="google"
+				onClick={() => console.log("Google login clicked")}
+			/>
 		</form>
 	);
 };
