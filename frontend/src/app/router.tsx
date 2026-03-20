@@ -1,19 +1,19 @@
 import { createBrowserRouter } from "react-router-dom";
-import LoginPage from "../features/auth/pages/LoginPage";
-import SignupPage from "../features/auth/pages/SignupPage";
-import App from "../App";
+import AuthPage from "../features/auth/pages/AuthPage";
+import ProtectedRoute from "../features/auth/ProtectedRoute";
+import HomePage from "../features/auth/pages/HomePage";
 
 export const router = createBrowserRouter([
   {
-    path: "/home",
-    element: <App />,
-  },
-  {
     path: "/",
-    element: <LoginPage />,
+    element: <AuthPage />,
   },
   {
-    path: "/signup",
-    element: <SignupPage />,
+    path: "/home",
+    element: (
+      <ProtectedRoute>
+        <HomePage />
+      </ProtectedRoute>
+    ),
   },
 ]);
