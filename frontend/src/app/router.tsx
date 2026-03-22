@@ -2,6 +2,12 @@ import { createBrowserRouter } from "react-router-dom";
 import AuthPage from "../features/auth/pages/AuthPage";
 import ProtectedRoute from "../features/auth/ProtectedRoute";
 import HomePage from "../features/auth/pages/HomePage";
+import Layout from "../shared/components/Layout";
+import DocumentsPage from "../features/documents/pages/DocumentsPage";
+import TasksPage from "../features/tasks/pages/TasksPage";
+import TeamPage from "../features/team/pages/TeamPage";
+import ChatPage from "../features/chat/pages/ChatPage";
+import SettingsPage from "../features/settings/pages/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -9,11 +15,36 @@ export const router = createBrowserRouter([
     element: <AuthPage />,
   },
   {
-    path: "/home",
     element: (
       <ProtectedRoute>
-        <HomePage />
+        <Layout />
       </ProtectedRoute>
     ),
+    children: [
+      {
+        path: "/home",
+        element: <HomePage />,
+      },
+      {
+        path: "/documents",
+        element: <DocumentsPage />,
+      },
+      {
+        path: "/tasks",
+        element: <TasksPage />,
+      },
+      {
+        path: "/team",
+        element: <TeamPage />,
+      },
+      {
+        path: "/chat",
+        element: <ChatPage />,
+      },
+      {
+        path: "/settings",
+        element: <SettingsPage />,
+      },
+    ],
   },
 ]);
