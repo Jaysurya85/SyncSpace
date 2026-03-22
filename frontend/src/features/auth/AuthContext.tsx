@@ -1,94 +1,62 @@
-import {
-	createContext,
-	useContext,
-	useEffect,
-	useMemo,
-	useState,
-	type ReactNode,
-} from "react";
-
-interface User {
-	id: string;
-	name: string;
-	email: string;
-	avatar: string;
-	provider: "google" | "";
-}
-
-interface AuthContextType {
-	user: User;
-	isAuthenticated: boolean;
-	loginWithGoogle: () => void;
-	logout: () => void;
-}
-
-const EMPTY_USER: User = {
-	id: "",
-	name: "",
-	email: "",
-	avatar: "",
-	provider: "",
-};
-
-const AuthContext = createContext<AuthContextType>({
-	user: EMPTY_USER,
-	isAuthenticated: false,
-	loginWithGoogle: () => { },
-	logout: () => { },
-});
+import { useMemo, useState, type ReactNode } from "react";
+import { AuthContext, EMPTY_USER } from "./authContext";
+import type { User } from "./authTypes";
+import { parseGoogleCredential } from "./googleIdentity";
 
 const AUTH_STORAGE_KEY = "syncspace-auth";
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-	const [user, setUser] = useState<User>(EMPTY_USER);
-	const [isAuthenticated, setIsAuthenticated] = useState(false);
+const readStoredUser = () => {
+  const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!storedAuth) {
+    return EMPTY_USER;
+  }
 
-	useEffect(() => {
-		const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-		if (storedAuth) {
-			try {
-				const parsedUser = JSON.parse(storedAuth) as User;
-				setUser(parsedUser);
-				setIsAuthenticated(true);
-			} catch {
-				localStorage.removeItem(AUTH_STORAGE_KEY);
-				setUser(EMPTY_USER);
-				setIsAuthenticated(false);
-			}
-		}
-	}, []);
-
-	const loginWithGoogle = () => {
-		const mockUser: User = {
-			id: "1",
-			name: "Jaysurya Ray",
-			email: "jaysurya@example.com",
-			avatar: "https://i.pravatar.cc/100?img=12",
-			provider: "google",
-		};
-
-		setUser(mockUser);
-		setIsAuthenticated(true);
-		localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-	};
-
-	const logout = () => {
-		setUser(EMPTY_USER);
-		setIsAuthenticated(false);
-		localStorage.removeItem(AUTH_STORAGE_KEY);
-	};
-
-	const value = useMemo(
-		() => ({
-			user,
-			isAuthenticated,
-			loginWithGoogle,
-			logout,
-		}),
-		[user, isAuthenticated]
-	);
-
-	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  try {
+    return JSON.parse(storedAuth) as User;
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return EMPTY_USER;
+  }
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User>(() => readStoredUser());
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => readStoredUser().provider !== ""
+  );
+
+  const loginWithGoogle = (credential: string) => {
+    const payload = parseGoogleCredential(credential);
+    const googleUser: User = {
+      id: payload.sub,
+      name: payload.name ?? "",
+      email: payload.email ?? "",
+      avatar: payload.picture ?? "",
+      provider: "google",
+    };
+
+    setUser(googleUser);
+    setIsAuthenticated(true);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(googleUser));
+  };
+
+  const logout = () => {
+    window.google?.accounts.id.disableAutoSelect();
+    setUser(EMPTY_USER);
+    setIsAuthenticated(false);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  };
+
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated,
+      isAuthLoading: false,
+      loginWithGoogle,
+      logout,
+    }),
+    [user, isAuthenticated]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

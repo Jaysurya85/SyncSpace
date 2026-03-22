@@ -43,10 +43,22 @@ const LoginForm: React.FC = () => {
 			console.log("Login successful");
 			navigate("/home");
 
-		} catch (err: any) {
-			setError(
-				err?.response?.data?.message || "Something went wrong."
-			);
+		} catch (err: unknown) {
+			const errorMessage =
+				typeof err === "object" &&
+				err !== null &&
+				"response" in err &&
+				typeof err.response === "object" &&
+				err.response !== null &&
+				"data" in err.response &&
+				typeof err.response.data === "object" &&
+				err.response.data !== null &&
+				"message" in err.response.data &&
+				typeof err.response.data.message === "string"
+					? err.response.data.message
+					: "Something went wrong.";
+
+			setError(errorMessage);
 		} finally {
 			setLoading(false);
 		}
