@@ -7,7 +7,7 @@ import (
 
 func TestGenerateAndValidateToken(t *testing.T) {
 	// Set test JWT secret
-	os.Setenv("JWT_SECRET", "test-secret-key")
+	os.Setenv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production")
 
 	// Test data
 	userID := "test-user-id-123"
