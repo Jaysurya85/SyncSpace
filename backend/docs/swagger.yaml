@@ -1,5 +1,17 @@
 basePath: /
 definitions:
+  handlers.AuthResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/handlers.UserInfo'
+    type: object
+  handlers.GoogleLoginRequest:
+    properties:
+      google_token:
+        type: string
+    type: object
   handlers.HealthResponse:
     properties:
       db:
@@ -7,6 +19,17 @@ definitions:
         type: string
       status:
         example: ok
+        type: string
+    type: object
+  handlers.UserInfo:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      profile_pic:
         type: string
     type: object
 host: localhost:8080
@@ -22,6 +45,40 @@ info:
   title: SyncSpace API
   version: "1.0"
 paths:
+  /api/auth/google:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with Google ID token
+      parameters:
+      - description: Google Token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.GoogleLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Google OAuth Login
+      tags:
+      - auth
   /health:
     get:
       description: Check if the API and database are healthy

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -25,14 +26,19 @@ import (
 
 	"syncspace-backend/internal/db"
 	"syncspace-backend/internal/handlers"
+	"syncspace-backend/internal/middleware"
 
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "syncspace-backend/docs"  // This will be generated
+	_ "syncspace-backend/docs"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// Load environment variables
+	_ = godotenv.Load()
 
 	port := getenv("PORT", "8080")
 
@@ -42,10 +48,33 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Create handlers
+	authHandler := handlers.NewAuthHandler(pool)
+
 	mux := http.NewServeMux()
 
 	// Swagger UI endpoint
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+
+	// Auth endpoints
+	mux.HandleFunc("POST /api/auth/google", authHandler.GoogleLogin)
+
+	// Protected test endpoint
+	protectedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims, ok := middleware.GetUserFromContext(r.Context())
+		if !ok {
+			http.Error(w, `{"error":"no user in context"}`, http.StatusInternalServerError)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "You are authenticated!",
+			"user_id": claims.UserID,
+			"email":   claims.Email,
+		})
+	})
+	mux.Handle("GET /api/protected", middleware.AuthMiddleware(protectedHandler))
 
 	// Health endpoint
 	mux.Handle("/health", handlers.NewHealthHandler(pool))
