@@ -5,7 +5,7 @@ export interface AuthContextType {
   user: User;
   isAuthenticated: boolean;
   isAuthLoading: boolean;
-  loginWithGoogle: (credential: string) => void;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,7 +21,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: EMPTY_USER,
   isAuthenticated: false,
   isAuthLoading: false,
-  loginWithGoogle: () => {},
+  loginWithGoogle: async () => {},
   logout: () => {},
 });
 
