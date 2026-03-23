@@ -2,16 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthProvider } from "../AuthContext";
 import { useAuth } from "../useAuth";
+import { authenticateWithGoogle } from "../authApi";
 
-const createGoogleCredential = (payload: Record<string, string>) => {
-  const header = btoa(JSON.stringify({ alg: "none", typ: "JWT" }));
-  const body = btoa(JSON.stringify(payload))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-
-  return `${header}.${body}.signature`;
-};
+vi.mock("../authApi", () => ({
+  authenticateWithGoogle: vi.fn(),
+}));
 
 const TestConsumer = () => {
   const { user, isAuthenticated, loginWithGoogle, logout } = useAuth();
@@ -22,16 +17,7 @@ const TestConsumer = () => {
       <p>{user.email || "no-email"}</p>
       <button
         type="button"
-        onClick={() =>
-          loginWithGoogle(
-            createGoogleCredential({
-              sub: "google-user-1",
-              name: "Test User",
-              email: "test@example.com",
-              picture: "https://example.com/avatar.png",
-            })
-          )
-        }
+        onClick={() => void loginWithGoogle("google-id-token")}
       >
         Login
       </button>
@@ -43,8 +29,20 @@ const TestConsumer = () => {
 };
 
 describe("AuthProvider", () => {
+  const mockedAuthenticateWithGoogle = vi.mocked(authenticateWithGoogle);
+
   beforeEach(() => {
     localStorage.clear();
+    mockedAuthenticateWithGoogle.mockResolvedValue({
+      token: "backend-jwt-token",
+      user: {
+        id: "google-user-1",
+        name: "Test User",
+        email: "test@example.com",
+        avatar: "https://example.com/avatar.png",
+        provider: "google",
+      },
+    });
     window.google = {
       accounts: {
         id: {
@@ -72,6 +70,7 @@ describe("AuthProvider", () => {
     expect(localStorage.getItem("syncspace-auth")).toContain(
       "test@example.com"
     );
+    expect(localStorage.getItem("syncspace-token")).toBe("backend-jwt-token");
   });
 
   it("clears auth state and storage on logout", async () => {
@@ -89,6 +88,7 @@ describe("AuthProvider", () => {
     expect(screen.getByText("anonymous")).toBeInTheDocument();
     expect(screen.getByText("no-email")).toBeInTheDocument();
     expect(localStorage.getItem("syncspace-auth")).toBeNull();
+    expect(localStorage.getItem("syncspace-token")).toBeNull();
     expect(window.google?.accounts.id.disableAutoSelect).toHaveBeenCalledTimes(
       1
     );

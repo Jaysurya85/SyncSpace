@@ -5,7 +5,7 @@ import {
 } from "../../features/auth/googleIdentity";
 
 interface GoogleAuthButtonProps {
-  onSuccess: (credential: string) => void;
+  onSuccess: (credential: string) => void | Promise<void>;
 }
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;

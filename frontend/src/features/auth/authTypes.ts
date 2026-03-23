@@ -5,3 +5,8 @@ export interface User {
   avatar: string;
   provider: "google" | "";
 }
+
+export interface AuthSession {
+  token: string;
+  user: User;
+}

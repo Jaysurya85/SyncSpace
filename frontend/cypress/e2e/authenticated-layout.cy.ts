@@ -12,6 +12,7 @@ describe("authenticated layout", () => {
             provider: "google",
           })
         );
+        window.localStorage.setItem("syncspace-token", "e2e-jwt-token");
       },
     });
 

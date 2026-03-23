@@ -83,33 +83,3 @@ export const loadGoogleIdentityScript = () => {
 
   return googleScriptPromise;
 };
-
-interface GoogleJwtPayload {
-  sub: string;
-  name?: string;
-  email?: string;
-  picture?: string;
-}
-
-const decodeBase64Url = (value: string) => {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized.padEnd(
-    normalized.length + ((4 - (normalized.length % 4)) % 4),
-    "="
-  );
-  const binary = window.atob(padded);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-
-  return new TextDecoder().decode(bytes);
-};
-
-export const parseGoogleCredential = (credential: string) => {
-  const parts = credential.split(".");
-  if (parts.length < 2) {
-    throw new Error("Invalid Google credential.");
-  }
-
-  const val: GoogleJwtPayload = JSON.parse(decodeBase64Url(parts[1])) as GoogleJwtPayload;
-  console.log("Decoded Google JWT payload:", val);
-  return val;
-};

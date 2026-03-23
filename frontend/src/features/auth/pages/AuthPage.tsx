@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import AuthCard from "../components/AuthCard";
 import GoogleAuthButton from "../../../shared/components/GoogleAuthButton";
@@ -6,6 +7,8 @@ import { useAuth } from "../useAuth";
 const AuthPage = () => {
   const navigate = useNavigate();
   const { loginWithGoogle, isAuthenticated, isAuthLoading } = useAuth();
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isAuthLoading) {
     return (
@@ -19,9 +22,21 @@ const AuthPage = () => {
     return <Navigate to="/home" replace />;
   }
 
-  const handleGoogleLogin = (credential: string) => {
-    loginWithGoogle(credential);
-    navigate("/home");
+  const handleGoogleLogin = async (credential: string) => {
+    try {
+      setAuthError(null);
+      setIsSubmitting(true);
+      await loginWithGoogle(credential);
+      navigate("/home");
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : "Google sign-in failed. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -47,6 +62,18 @@ const AuthPage = () => {
           </div>
 
           <GoogleAuthButton onSuccess={handleGoogleLogin} />
+
+          {isSubmitting && (
+            <p className="text-sm text-center text-text-secondary">
+              Completing sign-in...
+            </p>
+          )}
+
+          {authError && (
+            <p className="text-sm text-center text-red-600">
+              {authError}
+            </p>
+          )}
         </div>
       </AuthCard>
     </div>
