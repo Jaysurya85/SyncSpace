@@ -609,6 +609,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.UpdateDocumentRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.UserInfo": {
             "type": "object",
             "properties": {
@@ -622,17 +633,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "profile_pic": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.UpdateDocumentRequest": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "title": {
                     "type": "string"
                 }
             }
