@@ -9,13 +9,19 @@ interface GoogleAuthButtonProps {
 }
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+let initializedGoogleClientId: string | null = null;
 
 const GoogleAuthButton = ({ onSuccess }: GoogleAuthButtonProps) => {
   const buttonRef = useRef<HTMLDivElement | null>(null);
+  const onSuccessRef = useRef(onSuccess);
   const [error, setError] = useState<string | null>(null);
   const configurationError = GOOGLE_CLIENT_ID
     ? null
     : "Missing VITE_GOOGLE_CLIENT_ID in your environment.";
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
 
   useEffect(() => {
     if (configurationError) {
@@ -30,21 +36,24 @@ const GoogleAuthButton = ({ onSuccess }: GoogleAuthButtonProps) => {
           return;
         }
 
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: (response: GoogleCredentialResponse) => {
-            if (!response.credential) {
-              setError("Google sign-in did not return a credential.");
-              return;
-            }
+        if (initializedGoogleClientId !== GOOGLE_CLIENT_ID) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (response: GoogleCredentialResponse) => {
+              if (!response.credential) {
+                setError("Google sign-in did not return a credential.");
+                return;
+              }
 
-            setError(null);
-            onSuccess(response.credential);
-          },
-          auto_select: false,
-          ux_mode: "popup",
-          use_fedcm_for_prompt: true,
-        });
+              setError(null);
+              void onSuccessRef.current(response.credential);
+            },
+            auto_select: false,
+            ux_mode: "popup",
+            use_fedcm_for_prompt: true,
+          });
+          initializedGoogleClientId = GOOGLE_CLIENT_ID;
+        }
 
         buttonRef.current.innerHTML = "";
         window.google.accounts.id.renderButton(buttonRef.current, {
@@ -69,7 +78,7 @@ const GoogleAuthButton = ({ onSuccess }: GoogleAuthButtonProps) => {
     return () => {
       cancelled = true;
     };
-  }, [configurationError, onSuccess]);
+  }, [configurationError]);
 
   return (
     <div className="space-y-3">
