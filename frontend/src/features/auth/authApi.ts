@@ -1,45 +1,43 @@
-// import { api } from "../../services/api";
+import axios from "axios";
+import { api } from "../../services/api";
+import type { AuthSession } from "./authTypes";
 
-interface LoginPayload {
-	email: string;
-	password: string;
+interface GoogleAuthResponse {
+	token: string;
+	user: {
+		id: string;
+		email: string;
+		name: string;
+		profile_pic: string;
+	};
 }
 
-export const login = async (data: LoginPayload) => {
-	// const response = await api.post("/auth/login", data);
-	// return response.data;
-	await new Promise((resolve) => setTimeout(resolve, 800));
+export const authenticateWithGoogle = async (
+	googleToken: string
+): Promise<AuthSession> => {
+	try {
+		const response = await api.post<GoogleAuthResponse>("/auth/google", {
+			google_token: googleToken,
+		});
 
-	return {
-		success: true,
-		user: {
-			id: "1",
-			email: data.email,
-			name: "Test User",
-		},
-		token: "mock-jwt-token",
-	};
-};
+		return {
+			token: response.data.token,
+			user: {
+				id: response.data.user.id,
+				email: response.data.user.email,
+				name: response.data.user.name,
+				avatar: response.data.user.profile_pic,
+				provider: "google",
+			},
+		};
+	} catch (error) {
+		if (
+			axios.isAxiosError(error) &&
+			typeof error.response?.data?.error === "string"
+		) {
+			throw new Error(error.response.data.error);
+		}
 
-interface SignupPayload {
-	name: string;
-	email: string;
-	password: string;
-	confirmPassword: string;
-}
-
-export const signup = async (data: SignupPayload) => {
-	// const response = await api.post("/auth/login", data);
-	// return response.data;
-	await new Promise((resolve) => setTimeout(resolve, 800));
-
-	return {
-		success: true,
-		user: {
-			id: "1",
-			email: data.email,
-			name: "Test User",
-		},
-		token: "mock-jwt-token",
-	};
+		throw new Error("Google sign-in failed. Please try again.");
+	}
 };

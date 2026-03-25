@@ -5,3 +5,11 @@ export const api = axios.create({
 	withCredentials: true,
 });
 
+export const setAuthToken = (token: string | null) => {
+	if (token) {
+		api.defaults.headers.common.Authorization = `Bearer ${token}`;
+		return;
+	}
+
+	delete api.defaults.headers.common.Authorization;
+};
