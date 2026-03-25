@@ -22,9 +22,21 @@ Go backend for the SyncSpace collaboration platform.
    go run cmd/server/main.go
 ```
 
+The server now applies all `migrations/*.up.sql` files on startup.
+
 3. **Test:**
    - Health: `curl http://localhost:8080/health`
    - Swagger: `http://localhost:8080/swagger/index.html`
+
+## Document API
+
+All document endpoints require `Authorization: Bearer <jwt>`.
+
+- `POST /api/workspaces/{workspace_id}/documents`
+- `GET /api/workspaces/{workspace_id}/documents`
+- `GET /api/documents/{document_id}`
+- `PUT /api/documents/{document_id}`
+- `DELETE /api/documents/{document_id}`
 
 ## Stop
 ```bash

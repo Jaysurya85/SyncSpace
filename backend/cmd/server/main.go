@@ -25,12 +25,13 @@ import (
 	"time"
 
 	"syncspace-backend/internal/db"
+	"syncspace-backend/internal/documents"
 	"syncspace-backend/internal/handlers"
 	"syncspace-backend/internal/middleware"
 
+	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
 	_ "syncspace-backend/docs"
-	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -48,8 +49,13 @@ func main() {
 	}
 	defer pool.Close()
 
+	if err := db.RunMigrations(ctx, pool, "migrations"); err != nil {
+		log.Fatalf("migration failed: %v", err)
+	}
+
 	// Create handlers
 	authHandler := handlers.NewAuthHandler(pool)
+	documentHandler := handlers.NewDocumentHandler(documents.NewPostgresStore(pool))
 
 	mux := http.NewServeMux()
 
@@ -58,6 +64,11 @@ func main() {
 
 	// Auth endpoints
 	mux.HandleFunc("POST /api/auth/google", authHandler.GoogleLogin)
+	mux.Handle("POST /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.CreateDocument)))
+	mux.Handle("GET /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.ListDocuments)))
+	mux.Handle("GET /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.GetDocument)))
+	mux.Handle("PUT /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.UpdateDocument)))
+	mux.Handle("DELETE /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.DeleteDocument)))
 
 	// Protected test endpoint
 	protectedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +77,7 @@ func main() {
 			http.Error(w, `{"error":"no user in context"}`, http.StatusInternalServerError)
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
 			"message": "You are authenticated!",
