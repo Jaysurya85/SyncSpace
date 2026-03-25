@@ -57,6 +57,13 @@ definitions:
         example: ok
         type: string
     type: object
+  handlers.UpdateDocumentRequest:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
   handlers.UserInfo:
     properties:
       email:
@@ -66,13 +73,6 @@ definitions:
       name:
         type: string
       profile_pic:
-        type: string
-    type: object
-  handlers.UpdateDocumentRequest:
-    properties:
-      content:
-        type: string
-      title:
         type: string
     type: object
   workspaces.Workspace:
@@ -173,7 +173,8 @@ paths:
       tags:
       - documents
     get:
-      description: Get a single document by ID. Only workspace members can access documents.
+      description: Get a single document by ID. Only workspace members can access
+        documents.
       parameters:
       - description: Document ID
         in: path
@@ -260,7 +261,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a workspace and automatically add the authenticated user as the owner.
+      description: Create a workspace and automatically add the authenticated user
+        as the owner.
       parameters:
       - description: Workspace payload
         in: body
@@ -331,7 +333,8 @@ paths:
       - workspaces
   /api/workspaces/{workspace_id}/documents:
     get:
-      description: List all documents in a workspace. Only workspace members can view documents.
+      description: List all documents in a workspace. Only workspace members can view
+        documents.
       parameters:
       - description: Workspace ID
         in: path
@@ -373,7 +376,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new document inside a workspace. Only workspace members can create documents.
+      description: Create a new document inside a workspace. Only workspace members
+        can create documents.
       parameters:
       - description: Workspace ID
         in: path

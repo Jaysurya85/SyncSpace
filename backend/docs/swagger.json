@@ -603,6 +603,17 @@
                 }
             }
         },
+        "handlers.UpdateDocumentRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.UserInfo": {
             "type": "object",
             "properties": {
@@ -616,17 +627,6 @@
                     "type": "string"
                 },
                 "profile_pic": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.UpdateDocumentRequest": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "title": {
                     "type": "string"
                 }
             }
