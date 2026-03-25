@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"syncspace-backend/internal/auth"
 )
@@ -76,7 +76,7 @@ func (h *AuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	query := `SELECT id, name, profile_pic FROM users WHERE google_id = $1`
 	err = h.DB.QueryRow(ctx, query, googleUser.GoogleID).Scan(&userID, &name, &profilePic)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		// User doesn't exist, create new user
 		insertQuery := `
 			INSERT INTO users (email, name, google_id, profile_pic, created_at)
