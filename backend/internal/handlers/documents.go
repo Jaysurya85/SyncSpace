@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -24,10 +23,6 @@ type CreateDocumentRequest struct {
 type UpdateDocumentRequest struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
 }
 
 func NewDocumentHandler(store documents.Store) *DocumentHandler {
@@ -63,7 +58,7 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req CreateDocumentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeJSON(r, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 		return
 	}
@@ -191,7 +186,7 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req UpdateDocumentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeJSON(r, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 		return
 	}
@@ -262,10 +257,4 @@ func (h *DocumentHandler) writeStoreError(w http.ResponseWriter, err error) {
 	default:
 		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "internal server error"})
 	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
 }

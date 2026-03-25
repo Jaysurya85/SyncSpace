@@ -33,6 +33,11 @@ definitions:
       title:
         type: string
     type: object
+  handlers.CreateWorkspaceRequest:
+    properties:
+      name:
+        type: string
+    type: object
   handlers.ErrorResponse:
     properties:
       error:
@@ -68,6 +73,19 @@ definitions:
       content:
         type: string
       title:
+        type: string
+    type: object
+  workspaces.Workspace:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      owner_id:
+        type: string
+      role:
         type: string
     type: object
 host: localhost:8080
@@ -238,6 +256,79 @@ paths:
       summary: Update document
       tags:
       - documents
+  /api/workspaces:
+    post:
+      consumes:
+      - application/json
+      description: Create a workspace and automatically add the authenticated user as the owner.
+      parameters:
+      - description: Workspace payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/workspaces.Workspace'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Create workspace
+      tags:
+      - workspaces
+  /api/workspaces/{workspace_id}:
+    get:
+      description: Fetch a workspace by ID. Only workspace members can access it.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspace_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workspaces.Workspace'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get workspace
+      tags:
+      - workspaces
   /api/workspaces/{workspace_id}/documents:
     get:
       description: List all documents in a workspace. Only workspace members can view documents.

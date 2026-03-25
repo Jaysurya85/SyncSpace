@@ -28,6 +28,7 @@ import (
 	"syncspace-backend/internal/documents"
 	"syncspace-backend/internal/handlers"
 	"syncspace-backend/internal/middleware"
+	"syncspace-backend/internal/workspaces"
 
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -60,6 +61,7 @@ func main() {
 	// Create handlers
 	authHandler := handlers.NewAuthHandler(pool)
 	documentHandler := handlers.NewDocumentHandler(documents.NewPostgresStore(pool))
+	workspaceHandler := handlers.NewWorkspaceHandler(workspaces.NewPostgresStore(pool))
 
 	mux := http.NewServeMux()
 
@@ -68,6 +70,8 @@ func main() {
 
 	// Auth endpoints
 	mux.HandleFunc("POST /api/auth/google", authHandler.GoogleLogin)
+	mux.Handle("POST /api/workspaces", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.CreateWorkspace)))
+	mux.Handle("GET /api/workspaces/{workspace_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.GetWorkspace)))
 	mux.Handle("POST /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.CreateDocument)))
 	mux.Handle("GET /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.ListDocuments)))
 	mux.Handle("GET /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.GetDocument)))
