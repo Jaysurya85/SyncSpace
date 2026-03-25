@@ -32,6 +32,10 @@ import (
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
 	_ "syncspace-backend/docs"
+
+	"github.com/joho/godotenv"
+	"github.com/rs/cors"
+
 )
 
 func main() {
@@ -96,9 +100,17 @@ func main() {
 		_, _ = w.Write([]byte("SyncSpace backend is running\n"))
 	})
 
+	// Setup CORS
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173"}, // Allow all origins (change in production)
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+	})
+
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           mux,
+		Handler:           corsHandler.Handler(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -1,50 +1,69 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { AuthContext, EMPTY_USER } from "./authContext";
 import type { User } from "./authTypes";
-import { parseGoogleCredential } from "./googleIdentity";
+import { authenticateWithGoogle } from "./authApi";
+import { setAuthToken } from "../../services/api";
 
 const AUTH_STORAGE_KEY = "syncspace-auth";
+const AUTH_TOKEN_STORAGE_KEY = "syncspace-token";
 
-const readStoredUser = () => {
+const clearStoredSession = () => {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  setAuthToken(null);
+};
+
+const readStoredSession = () => {
   const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!storedAuth) {
-    return EMPTY_USER;
+  const storedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+
+  if (!storedAuth || !storedToken) {
+    clearStoredSession();
+    return {
+      user: EMPTY_USER,
+      isAuthenticated: false,
+    };
   }
 
   try {
-    return JSON.parse(storedAuth) as User;
+    const parsedUser = JSON.parse(storedAuth) as User;
+    setAuthToken(storedToken);
+
+    return {
+      user: parsedUser,
+      isAuthenticated: parsedUser.provider !== "",
+    };
   } catch {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    return EMPTY_USER;
+    clearStoredSession();
+    return {
+      user: EMPTY_USER,
+      isAuthenticated: false,
+    };
   }
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User>(() => readStoredUser());
+  const initialSession = readStoredSession();
+  const [user, setUser] = useState<User>(initialSession.user);
   const [isAuthenticated, setIsAuthenticated] = useState(
-    () => readStoredUser().provider !== ""
+    initialSession.isAuthenticated
   );
 
-  const loginWithGoogle = (credential: string) => {
-    const payload = parseGoogleCredential(credential);
-    const googleUser: User = {
-      id: payload.sub,
-      name: payload.name ?? "",
-      email: payload.email ?? "",
-      avatar: payload.picture ?? "",
-      provider: "google",
-    };
+  const loginWithGoogle = async (credential: string) => {
+    const session = await authenticateWithGoogle(credential);
 
-    setUser(googleUser);
+    setAuthToken(session.token);
+    setUser(session.user);
     setIsAuthenticated(true);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(googleUser));
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session.user));
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, session.token);
   };
 
   const logout = () => {
     window.google?.accounts.id.disableAutoSelect();
     setUser(EMPTY_USER);
     setIsAuthenticated(false);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    clearStoredSession();
   };
 
   const value = useMemo(
