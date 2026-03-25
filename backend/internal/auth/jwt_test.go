@@ -10,7 +10,7 @@ func TestGenerateAndValidateToken(t *testing.T) {
 	os.Setenv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production")
 
 	// Test data
-	userID := "test-user-id-123"
+	userID := "550e8400-e29b-41d4-a716-446655440000"
 	email := "test@example.com"
 
 	// Generate token
@@ -44,7 +44,7 @@ func TestGenerateAndValidateToken(t *testing.T) {
 }
 
 func TestValidateInvalidToken(t *testing.T) {
-	os.Setenv("JWT_SECRET", "test-secret-key")
+	os.Setenv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production")  // ← Change this line
 
 	// Try to validate a fake token
 	_, err := ValidateToken("invalid.token.here")

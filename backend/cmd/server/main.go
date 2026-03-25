@@ -14,6 +14,11 @@ package main
 // @host      localhost:8080
 // @BasePath  /
 
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 import (
 	"context"
 	"encoding/json"
@@ -34,9 +39,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	_ "syncspace-backend/docs"
 
-	"github.com/joho/godotenv"
 	"github.com/rs/cors"
-
 )
 
 func main() {

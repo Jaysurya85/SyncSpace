@@ -259,6 +259,11 @@ const docTemplate = `{
         },
         "/api/workspaces": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a workspace and automatically add the authenticated user as the owner.",
                 "consumes": [
                     "application/json"
@@ -311,6 +316,11 @@ const docTemplate = `{
         },
         "/api/workspaces/{workspace_id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetch a workspace by ID. Only workspace members can access it.",
                 "produces": [
                     "application/json"
@@ -656,6 +666,14 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

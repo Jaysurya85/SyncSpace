@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ func NewWorkspaceHandler(store workspaces.Store) *WorkspaceHandler {
 // @Tags         workspaces
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        request body CreateWorkspaceRequest true "Workspace payload"
 // @Success      201  {object}  workspaces.Workspace
 // @Failure      400  {object}  ErrorResponse
@@ -59,6 +61,7 @@ func (h *WorkspaceHandler) CreateWorkspace(w http.ResponseWriter, r *http.Reques
 
 	workspace, err := h.Store.CreateWorkspace(ctx, claims.UserID, req.Name)
 	if err != nil {
+		log.Printf("CreateWorkspace error: %v", err)
 		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "internal server error"})
 		return
 	}
@@ -71,6 +74,7 @@ func (h *WorkspaceHandler) CreateWorkspace(w http.ResponseWriter, r *http.Reques
 // @Description  Fetch a workspace by ID. Only workspace members can access it.
 // @Tags         workspaces
 // @Produce      json
+// @Security     BearerAuth
 // @Param        workspace_id path string true "Workspace ID"
 // @Success      200  {object}  workspaces.Workspace
 // @Failure      400  {object}  ErrorResponse
