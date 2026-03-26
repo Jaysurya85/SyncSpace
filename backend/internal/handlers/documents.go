@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -35,6 +37,7 @@ func NewDocumentHandler(store documents.Store) *DocumentHandler {
 // @Tags         documents
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        workspace_id path string true "Workspace ID"
 // @Param        request body CreateDocumentRequest true "Document payload"
 // @Success      201  {object}  documents.Document
@@ -58,7 +61,7 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req CreateDocumentRequest
-	if err := decodeJSON(r, &req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 		return
 	}
@@ -86,6 +89,7 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 // @Description  List all documents in a workspace. Only workspace members can view documents.
 // @Tags         documents
 // @Produce      json
+// @Security     BearerAuth
 // @Param        workspace_id path string true "Workspace ID"
 // @Success      200  {array}   documents.Document
 // @Failure      400  {object}  ErrorResponse
@@ -124,6 +128,7 @@ func (h *DocumentHandler) ListDocuments(w http.ResponseWriter, r *http.Request) 
 // @Description  Get a single document by ID. Only workspace members can access documents.
 // @Tags         documents
 // @Produce      json
+// @Security     BearerAuth
 // @Param        document_id path string true "Document ID"
 // @Success      200  {object}  documents.Document
 // @Failure      400  {object}  ErrorResponse
@@ -163,6 +168,7 @@ func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 // @Tags         documents
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        document_id path string true "Document ID"
 // @Param        request body UpdateDocumentRequest true "Updated document payload"
 // @Success      200  {object}  documents.Document
@@ -186,7 +192,7 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req UpdateDocumentRequest
-	if err := decodeJSON(r, &req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 		return
 	}
@@ -214,6 +220,7 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 // @Description  Delete a document by ID. Only workspace members can delete documents.
 // @Tags         documents
 // @Produce      json
+// @Security     BearerAuth
 // @Param        document_id path string true "Document ID"
 // @Success      204
 // @Failure      400  {object}  ErrorResponse
@@ -247,6 +254,8 @@ func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *DocumentHandler) writeStoreError(w http.ResponseWriter, err error) {
+	log.Printf("Store error: %v", err)
+	
 	switch {
 	case errors.Is(err, documents.ErrForbidden):
 		writeJSON(w, http.StatusForbidden, ErrorResponse{Error: "access denied"})

@@ -77,6 +77,11 @@ const docTemplate = `{
         },
         "/api/documents/{document_id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get a single document by ID. Only workspace members can access documents.",
                 "produces": [
                     "application/json"
@@ -134,6 +139,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update document content. Only workspace members can update documents.",
                 "consumes": [
                     "application/json"
@@ -203,6 +213,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a document by ID. Only workspace members can delete documents.",
                 "produces": [
                     "application/json"
@@ -380,6 +395,11 @@ const docTemplate = `{
         },
         "/api/workspaces/{workspace_id}/documents": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "List all documents in a workspace. Only workspace members can view documents.",
                 "produces": [
                     "application/json"
@@ -440,6 +460,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new document inside a workspace. Only workspace members can create documents.",
                 "consumes": [
                     "application/json"

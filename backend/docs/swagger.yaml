@@ -169,6 +169,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Delete document
       tags:
       - documents
@@ -208,6 +210,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get document
       tags:
       - documents
@@ -254,6 +258,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Update document
       tags:
       - documents
@@ -374,6 +380,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: List workspace documents
       tags:
       - documents
@@ -421,6 +429,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Create document
       tags:
       - documents
