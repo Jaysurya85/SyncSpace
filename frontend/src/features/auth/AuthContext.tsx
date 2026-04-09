@@ -3,9 +3,17 @@ import { AuthContext, EMPTY_USER } from "./authContext";
 import type { User } from "./authTypes";
 import { authenticateWithGoogle } from "./authApi";
 import { setAuthToken } from "../../services/api";
+import { isGoogleAuthEnabled } from "./authConfig";
 
 const AUTH_STORAGE_KEY = "syncspace-auth";
 const AUTH_TOKEN_STORAGE_KEY = "syncspace-token";
+const GUEST_USER: User = {
+  id: "guest-user",
+  name: "Workspace Guest",
+  email: "",
+  avatar: "",
+  provider: "",
+};
 
 const clearStoredSession = () => {
   localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -14,6 +22,14 @@ const clearStoredSession = () => {
 };
 
 const readStoredSession = () => {
+  if (!isGoogleAuthEnabled) {
+    clearStoredSession();
+    return {
+      user: GUEST_USER,
+      isAuthenticated: true,
+    };
+  }
+
   const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
   const storedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 
@@ -50,6 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const loginWithGoogle = async (credential: string) => {
+    if (!isGoogleAuthEnabled) {
+      return;
+    }
+
     const session = await authenticateWithGoogle(credential);
 
     setAuthToken(session.token);
@@ -60,6 +80,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    if (!isGoogleAuthEnabled) {
+      clearStoredSession();
+      return;
+    }
+
     window.google?.accounts.id.disableAutoSelect();
     setUser(EMPTY_USER);
     setIsAuthenticated(false);

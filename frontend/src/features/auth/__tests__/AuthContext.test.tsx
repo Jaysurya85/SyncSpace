@@ -8,6 +8,10 @@ vi.mock("../authApi", () => ({
   authenticateWithGoogle: vi.fn(),
 }));
 
+vi.mock("../authConfig", () => ({
+  isGoogleAuthEnabled: true,
+}));
+
 const TestConsumer = () => {
   const { user, isAuthenticated, loginWithGoogle, logout } = useAuth();
 
