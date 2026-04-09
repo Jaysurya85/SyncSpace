@@ -4,7 +4,6 @@ import ProtectedRoute from "../features/auth/ProtectedRoute";
 import HomePage from "../features/auth/pages/HomePage";
 import Layout from "../shared/components/Layout";
 import DocumentsPage from "../features/documents/pages/DocumentsPage";
-import DocumentDetailsPage from "../features/documents/pages/DocumentDetailsPage";
 import TasksPage from "../features/tasks/pages/TasksPage";
 import TeamPage from "../features/team/pages/TeamPage";
 import ChatPage from "../features/chat/pages/ChatPage";
@@ -32,7 +31,15 @@ export const router = createBrowserRouter([
       },
       {
         path: "/documents/:id",
-        element: <DocumentDetailsPage />,
+        lazy: async () => {
+          const module = await import(
+            "../features/documents/pages/DocumentDetailsPage"
+          );
+
+          return {
+            Component: module.default,
+          };
+        },
       },
       {
         path: "/tasks",
