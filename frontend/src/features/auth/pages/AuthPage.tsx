@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import AuthCard from "../components/AuthCard";
 import GoogleAuthButton from "../../../shared/components/GoogleAuthButton";
 import { useAuth } from "../useAuth";
+import { isGoogleAuthEnabled } from "../authConfig";
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -19,6 +20,10 @@ const AuthPage = () => {
   }
 
   if (isAuthenticated) {
+    return <Navigate to="/home" replace />;
+  }
+
+  if (!isGoogleAuthEnabled) {
     return <Navigate to="/home" replace />;
   }
 
