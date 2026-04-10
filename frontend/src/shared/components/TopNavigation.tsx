@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../features/auth/useAuth";
+import { isGoogleAuthEnabled } from "../../features/auth/authConfig";
 
 const TopNavigation = () => {
   const navigate = useNavigate();
@@ -46,18 +47,23 @@ const TopNavigation = () => {
                 {user.name || "SyncSpace Member"}
               </p>
               <p className="truncate text-xs text-text-secondary">
-                {user.email || "Signed in with Google"}
+                {user.email ||
+                  (isGoogleAuthEnabled
+                    ? "Signed in with Google"
+                    : "Authentication disabled")}
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition hover:bg-background"
-          >
-            Logout
-          </button>
+          {isGoogleAuthEnabled ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition hover:bg-background"
+            >
+              Logout
+            </button>
+          ) : null}
         </div>
       </div>
     </header>

@@ -30,6 +30,18 @@ export const router = createBrowserRouter([
         element: <DocumentsPage />,
       },
       {
+        path: "/documents/:id",
+        lazy: async () => {
+          const module = await import(
+            "../features/documents/pages/DocumentDetailsPage"
+          );
+
+          return {
+            Component: module.default,
+          };
+        },
+      },
+      {
         path: "/tasks",
         element: <TasksPage />,
       },
