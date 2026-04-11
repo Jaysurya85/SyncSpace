@@ -1,5 +1,5 @@
 describe("authenticated layout", () => {
-  it("restores a stored session and navigates through the sidebar", () => {
+  it("restores a stored session and opens a workspace-scoped route", () => {
     cy.visit("/home", {
       onBeforeLoad(window) {
         window.localStorage.setItem(
@@ -16,9 +16,10 @@ describe("authenticated layout", () => {
       },
     });
 
-    cy.contains("Welcome back, Cypress User").should("be.visible");
-    cy.get('aside a[href="/documents"]').click();
-    cy.contains("Shared documents").should("be.visible");
-    cy.url().should("include", "/documents");
+    cy.contains("Workspace hub").should("be.visible");
+    cy.contains("Product Design Sprint").click();
+    cy.url().should("include", "/workspaces/ws-product-design-sprint/home");
+    cy.get('aside a[href="/workspaces/ws-product-design-sprint/documents"]').click();
+    cy.url().should("include", "/workspaces/ws-product-design-sprint/documents");
   });
 });

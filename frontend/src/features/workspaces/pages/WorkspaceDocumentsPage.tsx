@@ -1,14 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FeaturePageShell from "../../../shared/components/FeaturePageShell";
 import Button from "../../../shared/components/Button";
 import Input from "../../../shared/components/Input";
-import { createDocument, fetchDocuments } from "../documentsApi";
-import DocumentCard from "../components/DocumentCard";
-import type { DocumentSummary } from "../documentTypes";
+import DocumentCard from "../../documents/components/DocumentCard";
+import {
+  createWorkspaceDocument,
+  fetchWorkspaceDocuments,
+} from "../../documents/documentApi";
+import type { DocumentSummary } from "../../documents/documentTypes";
+import { useWorkspaceShell } from "../workspaceShellContext";
 
-const DocumentsPage = () => {
+const WorkspaceDocumentsPage = () => {
   const navigate = useNavigate();
+  const titleInputRef = useRef<HTMLDivElement | null>(null);
+  const { currentWorkspace } = useWorkspaceShell();
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -18,13 +24,17 @@ const DocumentsPage = () => {
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
+    if (!currentWorkspace) {
+      return;
+    }
+
     let isMounted = true;
 
     const loadDocuments = async () => {
       try {
         setIsLoading(true);
         setLoadError(null);
-        const nextDocuments = await fetchDocuments();
+        const nextDocuments = await fetchWorkspaceDocuments(currentWorkspace.id);
 
         if (isMounted) {
           setDocuments(nextDocuments);
@@ -49,7 +59,11 @@ const DocumentsPage = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentWorkspace]);
+
+  if (!currentWorkspace) {
+    return null;
+  }
 
   const handleCreateDocument = async (
     event: React.FormEvent<HTMLFormElement>
@@ -65,7 +79,7 @@ const DocumentsPage = () => {
       setIsCreating(true);
       setCreateError(null);
 
-      const newDocument = await createDocument({
+      const newDocument = await createWorkspaceDocument(currentWorkspace.id, {
         title: title.trim(),
         description: description.trim(),
       });
@@ -73,7 +87,7 @@ const DocumentsPage = () => {
       setDocuments((currentDocuments) => [newDocument, ...currentDocuments]);
       setTitle("");
       setDescription("");
-      navigate(`/documents/${newDocument.id}`);
+      navigate(`/workspaces/${currentWorkspace.id}/documents/${newDocument.id}`);
     } catch (error) {
       setCreateError(
         error instanceof Error
@@ -88,48 +102,52 @@ const DocumentsPage = () => {
   return (
     <FeaturePageShell
       eyebrow="Documents"
-      title="Shared documents"
-      description="Browse the document library, create a new workspace draft, and jump directly into any document from one entry point."
+      title={`${currentWorkspace.name} documents`}
+      description="This page is fully scoped to the selected workspace. Create, open, and manage only the documents that belong to this workspace."
     >
       <section className="grid gap-5 xl:grid-cols-[0.78fr_1.22fr]">
         <form
           onSubmit={handleCreateDocument}
-          className="rounded-[28px] border border-border bg-surface p-6 shadow-sm"
+          className="rounded-[28px] border border-primary/15 bg-primary-light/60 p-6 shadow-sm"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
             Create document
           </p>
           <h2 className="mt-3 text-2xl font-semibold text-text-primary">
-            Start a new draft
+            Add a document to this workspace
           </h2>
           <p className="mt-2 text-sm leading-6 text-text-secondary">
-            New documents are created through the frontend document data layer
-            for now, then the user is routed into the document workspace.
+            Document creation now happens only in workspace context, matching
+            the intended backend contract and route structure.
           </p>
 
           <div className="mt-6 space-y-4">
-            <Input
-              label="Title"
-              placeholder="Quarterly planning brief"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              error={createError?.includes("title") ? createError : undefined}
-            />
+            <div ref={titleInputRef}>
+              <Input
+                label="Document title"
+                placeholder="Weekly retro notes"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                error={
+                  createError?.includes("title") ? createError : undefined
+                }
+              />
+            </div>
 
             <div className="w-full">
               <label
-                htmlFor="document-description"
+                htmlFor="workspace-document-description"
                 className="block text-sm font-medium text-text-primary"
               >
-                Description
+                Summary
               </label>
               <textarea
-                id="document-description"
+                id="workspace-document-description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Add a short summary so the team knows what this document is for."
-                rows={5}
-                className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Add a short summary for this workspace document."
+                rows={4}
+                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-text-primary transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -140,7 +158,7 @@ const DocumentsPage = () => {
 
           <div className="mt-6 flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.16em] text-text-muted">
-              Frontend dummy data
+              Workspace-scoped documents
             </p>
             <Button type="submit" loading={isCreating}>
               Create document
@@ -152,14 +170,14 @@ const DocumentsPage = () => {
           <div className="flex flex-col gap-3 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                All documents
+                Document library
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-text-primary">
-                Document library
+                Documents in this workspace
               </h2>
               <p className="mt-2 text-sm leading-6 text-text-secondary">
-                This list is the entry point into the document system and routes
-                each item into an individual document view.
+                Open a document to edit markdown-backed content within this
+                workspace context.
               </p>
             </div>
 
@@ -177,14 +195,6 @@ const DocumentsPage = () => {
           {!isLoading && loadError ? (
             <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
               <p className="text-sm font-medium text-red-700">{loadError}</p>
-              <Button
-                type="button"
-                variant="secondary"
-                className="mt-4"
-                onClick={() => window.location.reload()}
-              >
-                Retry
-              </Button>
             </div>
           ) : null}
 
@@ -194,22 +204,20 @@ const DocumentsPage = () => {
                 Empty state
               </p>
               <h3 className="mt-3 text-xl font-semibold text-text-primary">
-                No documents yet
+                No documents in this workspace yet
               </h3>
               <p className="mt-2 text-sm leading-6 text-text-secondary">
-                Create the first document to open the workspace and start the
-                document system.
+                Create the first document to start using this workspace as a
+                dedicated container.
               </p>
               <Button
                 type="button"
                 className="mt-5"
                 onClick={() =>
-                  document
-                    .querySelector<HTMLInputElement>('input[type="text"]')
-                    ?.focus()
+                  titleInputRef.current?.querySelector("input")?.focus()
                 }
               >
-                Create your first document
+                Create the first document
               </Button>
             </div>
           ) : null}
@@ -227,4 +235,4 @@ const DocumentsPage = () => {
   );
 };
 
-export default DocumentsPage;
+export default WorkspaceDocumentsPage;

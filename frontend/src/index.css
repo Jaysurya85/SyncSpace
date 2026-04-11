@@ -113,3 +113,36 @@ body {
 .notion-editor-shell .ProseMirror-focused {
   outline: none;
 }
+
+@keyframes workspacePopoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes workspaceModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.workspace-switcher-popover {
+  transform-origin: top center;
+  animation: workspacePopoverIn 160ms ease-out;
+}
+
+.workspace-create-modal {
+  animation: workspaceModalIn 180ms ease-out;
+}

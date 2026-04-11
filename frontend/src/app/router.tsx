@@ -1,12 +1,13 @@
-import { createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 import AuthPage from "../features/auth/pages/AuthPage";
 import ProtectedRoute from "../features/auth/ProtectedRoute";
 import HomePage from "../features/auth/pages/HomePage";
-import Layout from "../shared/components/Layout";
-import DocumentsPage from "../features/documents/pages/DocumentsPage";
+import GlobalAuthenticatedLayout from "../shared/components/GlobalAuthenticatedLayout";
+import WorkspaceLayout from "../shared/components/WorkspaceLayout";
+import WorkspaceHomePage from "../features/workspaces/pages/WorkspaceHomePage";
+import WorkspaceDocumentsPage from "../features/workspaces/pages/WorkspaceDocumentsPage";
 import TasksPage from "../features/tasks/pages/TasksPage";
 import TeamPage from "../features/team/pages/TeamPage";
-import ChatPage from "../features/chat/pages/ChatPage";
 import SettingsPage from "../features/settings/pages/SettingsPage";
 
 export const router = createBrowserRouter([
@@ -17,7 +18,7 @@ export const router = createBrowserRouter([
   {
     element: (
       <ProtectedRoute>
-        <Layout />
+        <GlobalAuthenticatedLayout />
       </ProtectedRoute>
     ),
     children: [
@@ -26,11 +27,33 @@ export const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
-        path: "/documents",
-        element: <DocumentsPage />,
+        path: "/settings",
+        element: <SettingsPage />,
+      },
+    ],
+  },
+  {
+    path: "/workspaces/:workspaceId",
+    element: (
+      <ProtectedRoute>
+        <WorkspaceLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Navigate to="home" replace />,
       },
       {
-        path: "/documents/:id",
+        path: "home",
+        element: <WorkspaceHomePage />,
+      },
+      {
+        path: "documents",
+        element: <WorkspaceDocumentsPage />,
+      },
+      {
+        path: "documents/:documentId",
         lazy: async () => {
           const module = await import(
             "../features/documents/pages/DocumentDetailsPage"
@@ -42,20 +65,12 @@ export const router = createBrowserRouter([
         },
       },
       {
-        path: "/tasks",
+        path: "tasks",
         element: <TasksPage />,
       },
       {
-        path: "/team",
+        path: "teams",
         element: <TeamPage />,
-      },
-      {
-        path: "/chat",
-        element: <ChatPage />,
-      },
-      {
-        path: "/settings",
-        element: <SettingsPage />,
       },
     ],
   },

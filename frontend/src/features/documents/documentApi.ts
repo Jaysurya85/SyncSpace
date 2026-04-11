@@ -4,11 +4,19 @@ import type {
   DocumentSummary,
   SaveDocumentPayload,
 } from "./documentTypes";
-import { initialDocuments } from "./documentsDummyData";
+import {
+  getDocumentsStore,
+  getWorkspacesStore,
+  setDocumentsStore,
+  setWorkspacesStore,
+} from "../workspaces/workspaceStore";
 
-let documentsStore = [...initialDocuments];
+const MOCK_DELAY_MS = 250;
 
-const MOCK_DELAY_MS = 300;
+const wait = (durationMs: number) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, durationMs);
+  });
 
 const formatCurrentDate = () =>
   new Intl.DateTimeFormat("en-US", {
@@ -27,13 +35,17 @@ const createDocumentId = (title: string) => {
   return `doc-${slug || "untitled"}-${Date.now()}`;
 };
 
-const wait = (durationMs: number) =>
-  new Promise((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
+const touchWorkspace = (workspaceId: string, updatedAt: string) => {
+  setWorkspacesStore(
+    getWorkspacesStore().map((workspace) =>
+      workspace.id === workspaceId ? { ...workspace, updatedAt } : workspace
+    )
+  );
+};
 
 const mapToSummary = (document: DocumentRecord): DocumentSummary => ({
   id: document.id,
+  workspaceId: document.workspaceId,
   title: document.title,
   description: document.description,
   ownerName: document.ownerName,
@@ -41,19 +53,26 @@ const mapToSummary = (document: DocumentRecord): DocumentSummary => ({
   updatedAt: document.updatedAt,
 });
 
-export const fetchDocuments = async (): Promise<DocumentSummary[]> => {
+export const fetchWorkspaceDocuments = async (
+  workspaceId: string
+): Promise<DocumentSummary[]> => {
   await wait(MOCK_DELAY_MS);
-  return documentsStore.map(mapToSummary);
+  return getDocumentsStore()
+    .filter((document) => document.workspaceId === workspaceId)
+    .map(mapToSummary);
 };
 
 export const fetchDocumentById = async (
-  id: string
+  documentId: string
 ): Promise<DocumentRecord | null> => {
   await wait(MOCK_DELAY_MS);
-  return documentsStore.find((document) => document.id === id) ?? null;
+  return (
+    getDocumentsStore().find((document) => document.id === documentId) ?? null
+  );
 };
 
-export const createDocument = async (
+export const createWorkspaceDocument = async (
+  workspaceId: string,
   payload: CreateDocumentPayload
 ): Promise<DocumentSummary> => {
   const title = payload.title.trim();
@@ -62,17 +81,28 @@ export const createDocument = async (
     throw new Error("Document title is required.");
   }
 
+  const workspaceExists = getWorkspacesStore().some(
+    (workspace) => workspace.id === workspaceId
+  );
+
+  if (!workspaceExists) {
+    throw new Error("Workspace not found.");
+  }
+
+  const updatedAt = formatCurrentDate();
   const newDocument: DocumentRecord = {
     id: createDocumentId(title),
+    workspaceId,
     title,
     description: payload.description.trim(),
     ownerName: "Workspace Guest",
     status: "Draft",
-    updatedAt: formatCurrentDate(),
+    updatedAt,
     content: `# ${title}\n\n`,
   };
 
-  documentsStore = [newDocument, ...documentsStore];
+  setDocumentsStore([newDocument, ...getDocumentsStore()]);
+  touchWorkspace(workspaceId, updatedAt);
   await wait(MOCK_DELAY_MS);
   return mapToSummary(newDocument);
 };
@@ -93,7 +123,7 @@ export const saveDocument = async (
 
   await wait(MOCK_DELAY_MS);
 
-  const existingDocument = documentsStore.find(
+  const existingDocument = getDocumentsStore().find(
     (document) => document.id === payload.id
   );
 
@@ -101,11 +131,12 @@ export const saveDocument = async (
     throw new Error("Document not found.");
   }
 
+  const updatedAt = formatCurrentDate();
   const updatedDocument: DocumentRecord = {
     ...existingDocument,
     title,
     content,
-    updatedAt: formatCurrentDate(),
+    updatedAt,
     description:
       content
         .replace(/^#{1,6}\s+/gm, "")
@@ -113,11 +144,30 @@ export const saveDocument = async (
         .trim()
         .slice(0, 140) || "No description added yet.",
   };
-  console.log("Saving document:", updatedDocument);
 
-  documentsStore = documentsStore.map((document) =>
-    document.id === payload.id ? updatedDocument : document
+  setDocumentsStore(
+    getDocumentsStore().map((document) =>
+      document.id === payload.id ? updatedDocument : document
+    )
   );
+  touchWorkspace(existingDocument.workspaceId, updatedAt);
 
   return updatedDocument;
+};
+
+export const deleteDocument = async (documentId: string): Promise<void> => {
+  await wait(MOCK_DELAY_MS);
+
+  const documentToDelete = getDocumentsStore().find(
+    (document) => document.id === documentId
+  );
+
+  if (!documentToDelete) {
+    throw new Error("Document not found.");
+  }
+
+  setDocumentsStore(
+    getDocumentsStore().filter((document) => document.id !== documentId)
+  );
+  touchWorkspace(documentToDelete.workspaceId, formatCurrentDate());
 };

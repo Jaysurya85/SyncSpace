@@ -1,8 +1,29 @@
-import type { DocumentRecord } from "./documentTypes";
+import type { DocumentRecord } from "../documents/documentTypes";
+import type { WorkspaceRecord } from "./workspaceTypes";
 
-export const initialDocuments: DocumentRecord[] = [
+export const initialWorkspaces: WorkspaceRecord[] = [
+  {
+    id: "ws-product-design-sprint",
+    name: "Product Design Sprint",
+    description:
+      "Planning, launch notes, and design reviews for the current product sprint.",
+    ownerName: "Priya Shah",
+    updatedAt: "Apr 10, 2026",
+  },
+  {
+    id: "ws-client-onboarding",
+    name: "Client Onboarding",
+    description:
+      "Documents and checklists for onboarding new clients into the SyncSpace workflow.",
+    ownerName: "Neha Patel",
+    updatedAt: "Apr 8, 2026",
+  },
+];
+
+export const initialWorkspaceDocuments: DocumentRecord[] = [
   {
     id: "doc-q2-launch-brief",
+    workspaceId: "ws-product-design-sprint",
     title: "Q2 Product Launch Brief",
     description:
       "Campaign goals, release milestones, and stakeholder sign-off notes for the quarter.",
@@ -26,6 +47,7 @@ The team is finalizing launch assets and reviewing the customer onboarding flow.
   },
   {
     id: "doc-design-system-audit",
+    workspaceId: "ws-product-design-sprint",
     title: "Design System Audit",
     description:
       "Component inventory, token cleanup proposals, and unresolved consistency gaps.",
@@ -45,6 +67,7 @@ Use \`Button\` and \`Input\` as the baseline components for audit examples.
   },
   {
     id: "doc-onboarding-checklist",
+    workspaceId: "ws-client-onboarding",
     title: "Client Onboarding Checklist",
     description:
       "Kickoff flow, access requests, handoff notes, and delivery dependencies.",

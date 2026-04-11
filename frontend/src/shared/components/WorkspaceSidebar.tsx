@@ -1,41 +1,41 @@
-import { NavLink } from "react-router-dom";
-import { appNavigation } from "../../app/navigation";
+import { Link, NavLink, useParams } from "react-router-dom";
+import { workspaceNavigation } from "../../app/workspaceNavigation";
+import WorkspaceCreateAction from "./WorkspaceCreateAction";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
-const Sidebar = () => {
+const WorkspaceSidebar = () => {
+  const { workspaceId } = useParams();
+
   return (
-    <aside className="w-full border-b border-border bg-surface px-4 py-5 lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:px-5">
+    <aside className="w-full border-b border-border bg-surface px-4 py-5 lg:min-h-screen lg:w-80 lg:border-b-0 lg:border-r lg:px-5">
       <div className="flex items-center justify-between gap-4 lg:flex-col lg:items-stretch">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
-            SyncSpace
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold text-text-primary">
-            Workspace
-          </h1>
+          <Link to="/home" className="inline-block">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+              SyncSpace
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold text-text-primary">
+              Workspace View
+            </h1>
+          </Link>
           <p className="mt-1 text-sm text-text-secondary">
-            Documents, tasks, and communication in one shared hub.
-          </p>
-        </div>
-
-        <div className="hidden rounded-2xl border border-primary/15 bg-primary-light px-4 py-3 lg:block">
-          <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary">
-            Current Space
-          </p>
-          <p className="mt-2 text-sm font-semibold text-text-primary">
-            Product Design Sprint
-          </p>
-          <p className="mt-1 text-sm text-text-secondary">
-            12 active collaborators
+            Switch workspaces or move through documents, teams, and tasks within
+            the currently selected workspace.
           </p>
         </div>
       </div>
 
+      <div className="mt-6">
+        <WorkspaceSwitcher />
+        <WorkspaceCreateAction />
+      </div>
+
       <nav className="mt-6">
         <ul className="grid gap-2 lg:gap-1">
-          {appNavigation.map((item) => (
-            <li key={item.path}>
+          {workspaceNavigation.map((item) => (
+            <li key={item.segment}>
               <NavLink
-                to={item.path}
+                to={`/workspaces/${workspaceId}/${item.segment}`}
                 className={({ isActive }) =>
                   [
                     "group flex items-center gap-3 rounded-2xl border px-3 py-3 transition",
@@ -76,4 +76,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar;
+export default WorkspaceSidebar;
