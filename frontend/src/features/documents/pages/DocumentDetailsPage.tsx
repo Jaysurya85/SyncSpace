@@ -1,21 +1,23 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import FeaturePageShell from "../../../shared/components/FeaturePageShell";
 import Button from "../../../shared/components/Button";
 import {
   fetchDocumentById,
   saveDocument,
-} from "../documentsApi";
+} from "../documentApi";
 import {
   htmlToMarkdown,
   markdownToHtml,
 } from "../documentMarkdown";
 import type { DocumentRecord } from "../documentTypes";
+import { useWorkspaceShell } from "../../workspaces/workspaceShellContext";
 
 const DocumentEditor = lazy(() => import("../components/DocumentEditor"));
 
 const DocumentDetailsPage = () => {
-  const { id } = useParams();
+  const { workspaceId, documentId } = useParams();
+  const { currentWorkspace } = useWorkspaceShell();
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | null>(
     null
   );
@@ -28,8 +30,8 @@ const DocumentDetailsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!id) {
-      setLoadError("Document ID is missing.");
+    if (!workspaceId || !documentId) {
+      setLoadError("Workspace or document ID is missing.");
       setIsLoading(false);
       return;
     }
@@ -41,15 +43,14 @@ const DocumentDetailsPage = () => {
         setIsLoading(true);
         setLoadError(null);
 
-        const nextDocument = await fetchDocumentById(id);
+        const nextDocument = await fetchDocumentById(documentId);
 
         if (!isMounted) {
           return;
         }
 
-        if (!nextDocument) {
-          setLoadError("Document not found.");
-          setDocumentRecord(null);
+        if (!nextDocument || nextDocument.workspaceId !== workspaceId) {
+          setLoadError("Document not found in this workspace.");
           return;
         }
 
@@ -76,10 +77,10 @@ const DocumentDetailsPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [workspaceId, documentId]);
 
   const handleSave = async () => {
-    if (!id) {
+    if (!documentId) {
       return;
     }
 
@@ -89,7 +90,7 @@ const DocumentDetailsPage = () => {
       setSaveSuccess(null);
 
       const updatedDocument = await saveDocument({
-        id,
+        id: documentId,
         title,
         content: htmlToMarkdown(editorContent),
       });
@@ -126,7 +127,7 @@ const DocumentDetailsPage = () => {
       <FeaturePageShell
         eyebrow="Document"
         title="Document unavailable"
-        description="The editor could not be opened for this document."
+        description="The editor could not be opened for this workspace document."
       >
         <div className="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
           <p className="text-sm font-medium text-red-700">
@@ -139,11 +140,33 @@ const DocumentDetailsPage = () => {
 
   return (
     <FeaturePageShell
-      eyebrow="Document"
+      eyebrow={currentWorkspace ? currentWorkspace.name : "Workspace"}
       title="Writing space"
-      description="A cleaner long-form editor surface with markdown persistence and a simple manual save flow."
+      description="This document is nested under a workspace route and keeps markdown persistence with a simple manual save flow."
     >
       <section className="mx-auto max-w-5xl space-y-6">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-text-secondary shadow-sm">
+          <Link
+            to="/workspaces"
+            className="font-medium text-primary transition hover:underline"
+          >
+            Workspaces
+          </Link>
+          {currentWorkspace ? (
+            <>
+              <span className="text-text-muted">/</span>
+              <Link
+                to={`/workspaces/${currentWorkspace.id}/documents`}
+                className="font-medium text-primary transition hover:underline"
+              >
+                {currentWorkspace.name}
+              </Link>
+            </>
+          ) : null}
+          <span className="text-text-muted">/</span>
+          <span>Document</span>
+        </div>
+
         <div className="notion-page-shell rounded-[32px] border border-border bg-surface px-6 py-6 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.18)] md:px-10 md:py-8">
           <div className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 flex-1">
@@ -175,6 +198,14 @@ const DocumentDetailsPage = () => {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-text-secondary">
+            {currentWorkspace ? (
+              <Link
+                to={`/workspaces/${currentWorkspace.id}/documents`}
+                className="rounded-full bg-primary-light px-3 py-1.5 text-primary transition hover:bg-primary/15"
+              >
+                {currentWorkspace.name}
+              </Link>
+            ) : null}
             <span className="rounded-full bg-background px-3 py-1.5">
               Owner: {documentRecord.ownerName}
             </span>

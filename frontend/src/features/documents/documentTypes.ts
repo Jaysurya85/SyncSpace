@@ -1,5 +1,6 @@
 export interface DocumentSummary {
   id: string;
+  workspaceId: string;
   title: string;
   description: string;
   ownerName: string;
