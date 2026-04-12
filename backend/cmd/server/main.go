@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -36,6 +37,7 @@ import (
 	"syncspace-backend/internal/workspaces"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 	_ "syncspace-backend/docs"
 )
@@ -109,9 +111,16 @@ func main() {
 		_, _ = w.Write([]byte("SyncSpace backend is running\n"))
 	})
 
+	handler := cors.New(cors.Options{
+		AllowedOrigins:   allowedOrigins(),
+		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+	}).Handler(mux)
+
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -135,4 +144,17 @@ func getenv(k, def string) string {
 		return v
 	}
 	return def
+}
+
+func allowedOrigins() []string {
+	raw := getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
 }
