@@ -49,14 +49,23 @@ const DocumentDetailsPage = () => {
           return;
         }
 
-        if (!nextDocument || nextDocument.workspaceId !== workspaceId) {
+        if (!nextDocument) {
           setLoadError("Document not found in this workspace.");
           return;
         }
 
-        setDocumentRecord(nextDocument);
-        setTitle(nextDocument.title);
-        setEditorContent(markdownToHtml(nextDocument.content));
+        const resolvedDocument = nextDocument.workspaceId
+          ? nextDocument
+          : { ...nextDocument, workspaceId };
+
+        if (resolvedDocument.workspaceId !== workspaceId) {
+          setLoadError("Document not found in this workspace.");
+          return;
+        }
+
+        setDocumentRecord(resolvedDocument);
+        setTitle(resolvedDocument.title);
+        setEditorContent(markdownToHtml(resolvedDocument.content));
       } catch (error) {
         if (isMounted) {
           setLoadError(

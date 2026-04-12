@@ -1,60 +1,128 @@
+import axios from "axios";
+import { api } from "../../services/api";
+import { fetchWorkspaceDocuments } from "../documents/documentApi";
+import { forgetWorkspaceId, getKnownWorkspaceIds, rememberWorkspaceId } from "./workspaceRegistry";
 import type {
   CreateWorkspacePayload,
   WorkspaceRecord,
   WorkspaceSummary,
 } from "./workspaceTypes";
-import {
-  getDocumentsStore,
-  getWorkspacesStore,
-  setWorkspacesStore,
-} from "./workspaceStore";
 
-const MOCK_DELAY_MS = 250;
+interface WorkspaceApiRecord {
+  id?: string | number;
+  _id?: string | number;
+  name?: string | null;
+  title?: string | null;
+  description?: string | null;
+  summary?: string | null;
+  owner_name?: string | null;
+  ownerName?: string | null;
+  updated_at?: string | null;
+  updatedAt?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+}
 
-const wait = (durationMs: number) =>
-  new Promise((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
+const toDisplayDate = (value?: string | null) => {
+  if (!value) {
+    return "Recently updated";
+  }
 
-const formatCurrentDate = () =>
-  new Intl.DateTimeFormat("en-US", {
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date());
-
-const createWorkspaceId = (name: string) => {
-  const slug = name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-
-  return `ws-${slug || "untitled"}-${Date.now()}`;
+  }).format(parsedDate);
 };
 
-const mapToSummary = (workspace: WorkspaceRecord): WorkspaceSummary => ({
-  ...workspace,
-  documentCount: getDocumentsStore().filter(
-    (document) => document.workspaceId === workspace.id
-  ).length,
+const normalizeWorkspace = (workspace: WorkspaceApiRecord): WorkspaceRecord => ({
+  id: String(workspace.id ?? workspace._id ?? ""),
+  name: workspace.name ?? workspace.title ?? "Untitled workspace",
+  description: workspace.description ?? workspace.summary ?? "",
+  ownerName: workspace.owner_name ?? workspace.ownerName ?? "Workspace owner",
+  updatedAt: toDisplayDate(
+    workspace.updated_at ??
+      workspace.updatedAt ??
+      workspace.created_at ??
+      workspace.createdAt
+  ),
 });
 
-export const fetchWorkspaces = async (): Promise<WorkspaceSummary[]> => {
-  await wait(MOCK_DELAY_MS);
-  return getWorkspacesStore().map(mapToSummary);
+const getErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (
+    axios.isAxiosError(error) &&
+    typeof error.response?.data?.error === "string"
+  ) {
+    return error.response.data.error;
+  }
+
+  return fallbackMessage;
+};
+
+const toWorkspaceSummary = async (
+  workspace: WorkspaceRecord
+): Promise<WorkspaceSummary> => {
+  const documents = await fetchWorkspaceDocuments(workspace.id);
+
+  return {
+    ...workspace,
+    documentCount: documents.length,
+  };
 };
 
 export const fetchWorkspaceById = async (
   workspaceId: string
 ): Promise<WorkspaceSummary | null> => {
-  await wait(MOCK_DELAY_MS);
+  try {
+    const response = await api.get<WorkspaceApiRecord>(`/workspaces/${workspaceId}`);
+    const workspace = normalizeWorkspace(response.data);
 
-  const workspace = getWorkspacesStore().find(
-    (currentWorkspace) => currentWorkspace.id === workspaceId
+    if (!workspace.id) {
+      return null;
+    }
+
+    rememberWorkspaceId(workspace.id);
+    return toWorkspaceSummary(workspace);
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      forgetWorkspaceId(workspaceId);
+      return null;
+    }
+
+    throw new Error(
+      getErrorMessage(error, "Failed to load workspace. Please try again.")
+    );
+  }
+};
+
+export const fetchWorkspaces = async (): Promise<WorkspaceSummary[]> => {
+  const workspaceIds = getKnownWorkspaceIds();
+
+  if (workspaceIds.length === 0) {
+    return [];
+  }
+
+  const results = await Promise.allSettled(
+    workspaceIds.map((workspaceId) => fetchWorkspaceById(workspaceId))
   );
 
-  return workspace ? mapToSummary(workspace) : null;
+  return results.flatMap((result, index) => {
+    if (result.status === "fulfilled" && result.value) {
+      return [result.value];
+    }
+
+    if (result.status === "fulfilled" && !result.value) {
+      forgetWorkspaceId(workspaceIds[index]);
+    }
+
+    return [];
+  });
 };
 
 export const createWorkspace = async (
@@ -66,16 +134,31 @@ export const createWorkspace = async (
     throw new Error("Workspace name is required.");
   }
 
-  const newWorkspace: WorkspaceRecord = {
-    id: createWorkspaceId(name),
-    name,
-    description: payload.description.trim(),
-    ownerName: "Workspace Guest",
-    updatedAt: formatCurrentDate(),
-  };
+  try {
+    const response = await api.post<WorkspaceApiRecord | { workspace: WorkspaceApiRecord }>(
+      "/workspaces",
+      {
+        name,
+        description: payload.description.trim(),
+      }
+    );
 
-  setWorkspacesStore([newWorkspace, ...getWorkspacesStore()]);
-  await wait(MOCK_DELAY_MS);
+    const workspaceRecord =
+      "workspace" in response.data ? response.data.workspace : response.data;
+    const workspace = normalizeWorkspace(workspaceRecord);
 
-  return mapToSummary(newWorkspace);
+    if (!workspace.id) {
+      throw new Error("Workspace creation did not return an ID.");
+    }
+
+    rememberWorkspaceId(workspace.id);
+    return {
+      ...workspace,
+      documentCount: 0,
+    };
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to create workspace. Please try again.")
+    );
+  }
 };
