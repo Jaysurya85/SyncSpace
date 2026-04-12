@@ -33,11 +33,13 @@ import (
 	"syncspace-backend/internal/documents"
 	"syncspace-backend/internal/handlers"
 	"syncspace-backend/internal/middleware"
+	"syncspace-backend/internal/users"
 	"syncspace-backend/internal/workspaces"
+
+	_ "syncspace-backend/docs"
 
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "syncspace-backend/docs"
 )
 
 func main() {
@@ -61,12 +63,20 @@ func main() {
 	authHandler := handlers.NewAuthHandler(pool)
 	documentHandler := handlers.NewDocumentHandler(documents.NewPostgresStore(pool))
 	workspaceHandler := handlers.NewWorkspaceHandler(workspaces.NewPostgresStore(pool))
+	userHandler := users.NewUserHandler(users.NewPostgresStore(pool))
 
 	mux := http.NewServeMux()
 
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
 	mux.HandleFunc("POST /api/auth/google", authHandler.GoogleLogin)
+
+	mux.Handle("POST /api/users", http.HandlerFunc(userHandler.CreateUser))
+	mux.Handle("GET /api/users", middleware.AuthMiddleware(http.HandlerFunc(userHandler.ListUsers)))
+	mux.Handle("GET /api/users/me", middleware.AuthMiddleware(http.HandlerFunc(userHandler.GetCurrentUser)))
+	mux.Handle("GET /api/users/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(userHandler.GetUser)))
+	mux.Handle("PUT /api/users/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UpdateUser)))
+	mux.Handle("DELETE /api/users/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(userHandler.DeleteUser)))
 
 	mux.Handle("POST /api/workspaces", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.CreateWorkspace)))
 	mux.Handle("GET /api/workspaces", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.ListWorkspaces)))
