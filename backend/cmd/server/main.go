@@ -38,8 +38,6 @@ import (
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
 	_ "syncspace-backend/docs"
-
-	"github.com/rs/cors"
 )
 
 func main() {
@@ -74,7 +72,11 @@ func main() {
 	// Auth endpoints
 	mux.HandleFunc("POST /api/auth/google", authHandler.GoogleLogin)
 	mux.Handle("POST /api/workspaces", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.CreateWorkspace)))
+	mux.Handle("GET /api/workspaces", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.ListWorkspaces)))
 	mux.Handle("GET /api/workspaces/{workspace_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.GetWorkspace)))
+	mux.Handle("PUT /api/workspaces/{workspace_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.UpdateWorkspace)))
+	mux.Handle("POST /api/workspaces/{workspace_id}/members", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.AddMember)))
+	mux.Handle("DELETE /api/workspaces/{workspace_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.DeleteWorkspace)))
 	mux.Handle("POST /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.CreateDocument)))
 	mux.Handle("GET /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.ListDocuments)))
 	mux.Handle("GET /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.GetDocument)))
@@ -107,17 +109,9 @@ func main() {
 		_, _ = w.Write([]byte("SyncSpace backend is running\n"))
 	})
 
-	// Setup CORS
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"}, // Allow all origins (change in production)
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		AllowCredentials: true,
-	})
-
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           corsHandler.Handler(mux),
+		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
