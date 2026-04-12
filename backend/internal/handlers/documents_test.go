@@ -43,6 +43,85 @@ func (f *fakeDocumentStore) DeleteDocument(ctx context.Context, documentID, user
 	return f.deleteFn(ctx, documentID, userID)
 }
 
+func TestCreateDocumentInvalidJSON(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{})
+	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/ws-1/documents", strings.NewReader(`not-json`))
+	req.SetPathValue("workspace_id", "ws-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+	handler.CreateDocument(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestUpdateDocumentInvalidJSON(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{})
+	req := httptest.NewRequest(http.MethodPut, "/api/documents/doc-1", strings.NewReader(`not-json`))
+	req.SetPathValue("document_id", "doc-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+	handler.UpdateDocument(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestCreateDocumentUnauthorized(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{})
+	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/ws-1/documents", strings.NewReader(`{"title":"Spec"}`))
+	req.SetPathValue("workspace_id", "ws-1")
+	rec := httptest.NewRecorder()
+	handler.CreateDocument(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestListDocumentsUnauthorized(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{})
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces/ws-1/documents", nil)
+	req.SetPathValue("workspace_id", "ws-1")
+	rec := httptest.NewRecorder()
+	handler.ListDocuments(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestGetDocumentUnauthorized(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{})
+	req := httptest.NewRequest(http.MethodGet, "/api/documents/doc-1", nil)
+	req.SetPathValue("document_id", "doc-1")
+	rec := httptest.NewRecorder()
+	handler.GetDocument(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestUpdateDocumentUnauthorized(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{})
+	req := httptest.NewRequest(http.MethodPut, "/api/documents/doc-1", strings.NewReader(`{"title":"X"}`))
+	req.SetPathValue("document_id", "doc-1")
+	rec := httptest.NewRecorder()
+	handler.UpdateDocument(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestDeleteDocumentUnauthorized(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{})
+	req := httptest.NewRequest(http.MethodDelete, "/api/documents/doc-1", nil)
+	req.SetPathValue("document_id", "doc-1")
+	rec := httptest.NewRecorder()
+	handler.DeleteDocument(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
 func TestCreateDocument(t *testing.T) {
 	handler := NewDocumentHandler(&fakeDocumentStore{
 		createFn: func(ctx context.Context, workspaceID, userID, title, content string) (*documents.Document, error) {
@@ -136,6 +215,122 @@ func TestUpdateDocumentRequiresTitle(t *testing.T) {
 	}
 }
 
+func TestCreateDocumentRequiresTitle(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		createFn: func(ctx context.Context, workspaceID, userID, title, content string) (*documents.Document, error) {
+			return nil, errors.New("should not be called")
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/ws-1/documents", strings.NewReader(`{"title":"   ","content":"draft"}`))
+	req.SetPathValue("workspace_id", "ws-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+
+	handler.CreateDocument(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestListDocuments(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		listFn: func(ctx context.Context, workspaceID, userID string) ([]documents.Document, error) {
+			return []documents.Document{
+				{ID: "doc-1", WorkspaceID: workspaceID, Title: "Spec", CreatedBy: userID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+				{ID: "doc-2", WorkspaceID: workspaceID, Title: "Design", CreatedBy: userID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces/ws-1/documents", nil)
+	req.SetPathValue("workspace_id", "ws-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+
+	handler.ListDocuments(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var got []documents.Document
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 documents, got %d", len(got))
+	}
+}
+
+func TestGetDocument(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		getFn: func(ctx context.Context, documentID, userID string) (*documents.Document, error) {
+			return &documents.Document{
+				ID:        documentID,
+				Title:     "Spec",
+				CreatedBy: userID,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/documents/doc-1", nil)
+	req.SetPathValue("document_id", "doc-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+
+	handler.GetDocument(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var got documents.Document
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.ID != "doc-1" || got.Title != "Spec" {
+		t.Fatalf("unexpected response: %+v", got)
+	}
+}
+
+func TestUpdateDocument(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		updateFn: func(ctx context.Context, documentID, userID, title, content string) (*documents.Document, error) {
+			return &documents.Document{
+				ID:        documentID,
+				Title:     title,
+				Content:   content,
+				UpdatedBy: userID,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/documents/doc-1", strings.NewReader(`{"title":"Updated Spec","content":"new content"}`))
+	req.SetPathValue("document_id", "doc-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+
+	handler.UpdateDocument(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var got documents.Document
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Title != "Updated Spec" || got.Content != "new content" {
+		t.Fatalf("unexpected response: %+v", got)
+	}
+}
+
 func TestDeleteDocument(t *testing.T) {
 	called := false
 	handler := NewDocumentHandler(&fakeDocumentStore{
@@ -160,5 +355,88 @@ func TestDeleteDocument(t *testing.T) {
 	}
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d", rec.Code)
+	}
+}
+
+func TestDeleteDocumentForbidden(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		deleteFn: func(ctx context.Context, documentID, userID string) error {
+			return documents.ErrForbidden
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/documents/doc-1", nil)
+	req.SetPathValue("document_id", "doc-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-2"}))
+	rec := httptest.NewRecorder()
+
+	handler.DeleteDocument(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestCreateDocumentForbidden(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		createFn: func(ctx context.Context, workspaceID, userID, title, content string) (*documents.Document, error) {
+			return nil, documents.ErrForbidden
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/ws-1/documents", strings.NewReader(`{"title":"Spec"}`))
+	req.SetPathValue("workspace_id", "ws-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+	handler.CreateDocument(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestCreateDocumentWorkspaceNotFound(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		createFn: func(ctx context.Context, workspaceID, userID, title, content string) (*documents.Document, error) {
+			return nil, documents.ErrWorkspaceNotFound
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/ws-999/documents", strings.NewReader(`{"title":"Spec"}`))
+	req.SetPathValue("workspace_id", "ws-999")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+	handler.CreateDocument(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+}
+
+func TestGetDocumentForbidden(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		getFn: func(ctx context.Context, documentID, userID string) (*documents.Document, error) {
+			return nil, documents.ErrForbidden
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/api/documents/doc-1", nil)
+	req.SetPathValue("document_id", "doc-1")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-2"}))
+	rec := httptest.NewRecorder()
+	handler.GetDocument(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestUpdateDocumentNotFound(t *testing.T) {
+	handler := NewDocumentHandler(&fakeDocumentStore{
+		updateFn: func(ctx context.Context, documentID, userID, title, content string) (*documents.Document, error) {
+			return nil, documents.ErrDocumentNotFound
+		},
+	})
+	req := httptest.NewRequest(http.MethodPut, "/api/documents/doc-999", strings.NewReader(`{"title":"Updated"}`))
+	req.SetPathValue("document_id", "doc-999")
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, &auth.Claims{UserID: "user-1"}))
+	rec := httptest.NewRecorder()
+	handler.UpdateDocument(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
 	}
 }

@@ -3,6 +3,8 @@ package auth
 import (
 	"os"
 	"testing"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestGenerateAndValidateToken(t *testing.T) {
@@ -44,13 +46,43 @@ func TestGenerateAndValidateToken(t *testing.T) {
 }
 
 func TestValidateInvalidToken(t *testing.T) {
-	os.Setenv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production")  // ← Change this line
+	os.Setenv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production")
 
-	// Try to validate a fake token
 	_, err := ValidateToken("invalid.token.here")
 	if err == nil {
 		t.Fatal("Expected error for invalid token, got nil")
 	}
 
 	t.Logf("Correctly rejected invalid token: %v", err)
+}
+
+func TestValidateTokenWrongSigningMethod(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test-secret")
+
+	// Create a token signed with None algorithm (not HMAC) to trigger the signing method check
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{"user_id": "u1"})
+	tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+
+	_, err := ValidateToken(tokenString)
+	if err == nil {
+		t.Fatal("expected error for wrong signing method")
+	}
+}
+
+func TestGenerateTokenNoSecret(t *testing.T) {
+	os.Unsetenv("JWT_SECRET")
+
+	_, err := GenerateToken("user-1", "test@example.com")
+	if err == nil {
+		t.Fatal("expected error when JWT_SECRET is not set")
+	}
+}
+
+func TestValidateTokenNoSecret(t *testing.T) {
+	os.Unsetenv("JWT_SECRET")
+
+	_, err := ValidateToken("any.token.here")
+	if err == nil {
+		t.Fatal("expected error when JWT_SECRET is not set")
+	}
 }
