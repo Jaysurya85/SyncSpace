@@ -30,7 +30,30 @@ The server now applies all `migrations/*.up.sql` files on startup.
 
 ## Document API
 
-All document endpoints require `Authorization: Bearer <jwt>`.
+All protected endpoints require `Authorization: Bearer <jwt>`.
+
+## Workspace API
+
+- `POST /api/workspaces`
+- `GET /api/workspaces`
+- `GET /api/workspaces/{workspace_id}`
+- `PUT /api/workspaces/{workspace_id}`
+- `POST /api/workspaces/{workspace_id}/members`
+- `DELETE /api/workspaces/{workspace_id}`
+
+`POST /api/workspaces/{workspace_id}/members` is owner-only and accepts either:
+
+```json
+{"email":"member@example.com"}
+```
+
+or
+
+```json
+{"user_id":"uuid"}
+```
+
+## Document API
 
 - `POST /api/workspaces/{workspace_id}/documents`
 - `GET /api/workspaces/{workspace_id}/documents`
