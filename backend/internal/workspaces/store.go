@@ -38,6 +38,8 @@ type Store interface {
 	GetWorkspace(ctx context.Context, workspaceID, userID string) (*Workspace, error)
 	UpdateWorkspace(ctx context.Context, workspaceID, ownerUserID, name string) (*Workspace, error)
 	AddMember(ctx context.Context, workspaceID, ownerUserID, memberUserID, memberEmail string) (*WorkspaceMember, error)
+	ListMembers(ctx context.Context, workspaceID, userID string) ([]WorkspaceMember, error)
+	RemoveMember(ctx context.Context, workspaceID, ownerUserID, memberUserID string) error
 	DeleteWorkspace(ctx context.Context, workspaceID, ownerUserID string) error
 }
 
@@ -201,6 +203,70 @@ func (s *PostgresStore) AddMember(ctx context.Context, workspaceID, ownerUserID,
 	}
 
 	return &member, nil
+}
+
+func (s *PostgresStore) ListMembers(ctx context.Context, workspaceID, userID string) ([]WorkspaceMember, error) {
+	// ensure the requester is a member
+	const checkQuery = `SELECT EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2)`
+	var isMember bool
+	if err := s.DB.QueryRow(ctx, checkQuery, workspaceID, userID).Scan(&isMember); err != nil {
+		return nil, err
+	}
+	if !isMember {
+		exists, err := s.workspaceExists(ctx, workspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, ErrWorkspaceNotFound
+		}
+		return nil, ErrForbidden
+	}
+
+	const query = `
+		SELECT wm.workspace_id, wm.user_id, u.email, u.name, wm.role, wm.joined_at
+		FROM workspace_members wm
+		JOIN users u ON u.id = wm.user_id
+		WHERE wm.workspace_id = $1
+		ORDER BY wm.joined_at ASC
+	`
+	rows, err := s.DB.Query(ctx, query, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []WorkspaceMember
+	for rows.Next() {
+		var m WorkspaceMember
+		if err := rows.Scan(&m.WorkspaceID, &m.UserID, &m.Email, &m.Name, &m.Role, &m.JoinedAt); err != nil {
+			return nil, err
+		}
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
+func (s *PostgresStore) RemoveMember(ctx context.Context, workspaceID, ownerUserID, memberUserID string) error {
+	if err := s.ensureOwnerAccess(ctx, workspaceID, ownerUserID); err != nil {
+		return err
+	}
+
+	if ownerUserID == memberUserID {
+		return ErrForbidden // owner cannot remove themselves
+	}
+
+	tag, err := s.DB.Exec(ctx,
+		`DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+		workspaceID, memberUserID,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	return nil
 }
 
 func (s *PostgresStore) DeleteWorkspace(ctx context.Context, workspaceID, ownerUserID string) error {
