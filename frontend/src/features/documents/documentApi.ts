@@ -1,47 +1,71 @@
+import axios from "axios";
+import { api } from "../../services/api";
 import type {
   CreateDocumentPayload,
   DocumentRecord,
   DocumentSummary,
   SaveDocumentPayload,
 } from "./documentTypes";
-import {
-  getDocumentsStore,
-  getWorkspacesStore,
-  setDocumentsStore,
-  setWorkspacesStore,
-} from "../workspaces/workspaceStore";
 
-const MOCK_DELAY_MS = 250;
+interface DocumentApiRecord {
+  id?: string | number;
+  _id?: string | number;
+  workspace_id?: string | number | null;
+  workspaceId?: string | number | null;
+  title?: string | null;
+  name?: string | null;
+  description?: string | null;
+  summary?: string | null;
+  owner_name?: string | null;
+  ownerName?: string | null;
+  status?: string | null;
+  updated_at?: string | null;
+  updatedAt?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+  content?: string | null;
+  markdown?: string | null;
+  body?: string | null;
+}
 
-const wait = (durationMs: number) =>
-  new Promise((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
+interface DocumentListResponse {
+  documents?: DocumentApiRecord[];
+  data?: DocumentApiRecord[];
+}
 
-const formatCurrentDate = () =>
-  new Intl.DateTimeFormat("en-US", {
+const toDisplayDate = (value?: string | null) => {
+  if (!value) {
+    return "Recently updated";
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date());
-
-const createDocumentId = (title: string) => {
-  const slug = title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-
-  return `doc-${slug || "untitled"}-${Date.now()}`;
+  }).format(parsedDate);
 };
 
-const touchWorkspace = (workspaceId: string, updatedAt: string) => {
-  setWorkspacesStore(
-    getWorkspacesStore().map((workspace) =>
-      workspace.id === workspaceId ? { ...workspace, updatedAt } : workspace
-    )
-  );
-};
+const normalizeDocument = (document: DocumentApiRecord): DocumentRecord => ({
+  id: String(document.id ?? document._id ?? ""),
+  workspaceId: String(document.workspace_id ?? document.workspaceId ?? ""),
+  title: document.title ?? document.name ?? "Untitled document",
+  description: document.description ?? document.summary ?? "",
+  ownerName: document.owner_name ?? document.ownerName ?? "Workspace owner",
+  status: document.status ?? "Draft",
+  updatedAt: toDisplayDate(
+    document.updated_at ??
+      document.updatedAt ??
+      document.created_at ??
+      document.createdAt
+  ),
+  content: document.content ?? document.markdown ?? document.body ?? "",
+});
 
 const mapToSummary = (document: DocumentRecord): DocumentSummary => ({
   id: document.id,
@@ -53,22 +77,60 @@ const mapToSummary = (document: DocumentRecord): DocumentSummary => ({
   updatedAt: document.updatedAt,
 });
 
+const getErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (
+    axios.isAxiosError(error) &&
+    typeof error.response?.data?.error === "string"
+  ) {
+    return error.response.data.error;
+  }
+
+  return fallbackMessage;
+};
+
 export const fetchWorkspaceDocuments = async (
   workspaceId: string
 ): Promise<DocumentSummary[]> => {
-  await wait(MOCK_DELAY_MS);
-  return getDocumentsStore()
-    .filter((document) => document.workspaceId === workspaceId)
-    .map(mapToSummary);
+  try {
+    const response = await api.get<DocumentListResponse | DocumentApiRecord[]>(
+      `/workspaces/${workspaceId}/documents`
+    );
+
+    const documents = Array.isArray(response.data)
+      ? response.data
+      : response.data.documents ?? response.data.data ?? [];
+
+    return documents
+      .map(normalizeDocument)
+      .filter((document) => document.id)
+      .map((document) => ({
+        ...mapToSummary(document),
+        workspaceId: document.workspaceId || workspaceId,
+      }));
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to load documents. Please try again.")
+    );
+  }
 };
 
 export const fetchDocumentById = async (
   documentId: string
 ): Promise<DocumentRecord | null> => {
-  await wait(MOCK_DELAY_MS);
-  return (
-    getDocumentsStore().find((document) => document.id === documentId) ?? null
-  );
+  try {
+    const response = await api.get<DocumentApiRecord>(`/documents/${documentId}`);
+    const document = normalizeDocument(response.data);
+
+    return document.id ? document : null;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
+
+    throw new Error(
+      getErrorMessage(error, "Failed to load document. Please try again.")
+    );
+  }
 };
 
 export const createWorkspaceDocument = async (
@@ -81,30 +143,32 @@ export const createWorkspaceDocument = async (
     throw new Error("Document title is required.");
   }
 
-  const workspaceExists = getWorkspacesStore().some(
-    (workspace) => workspace.id === workspaceId
-  );
+  try {
+    const response = await api.post<
+      DocumentApiRecord | { document: DocumentApiRecord }
+    >(`/workspaces/${workspaceId}/documents`, {
+      title,
+      description: payload.description.trim(),
+      content: `# ${title}\n\n`,
+    });
 
-  if (!workspaceExists) {
-    throw new Error("Workspace not found.");
+    const documentRecord =
+      "document" in response.data ? response.data.document : response.data;
+    const document = normalizeDocument({
+      ...documentRecord,
+      workspace_id: documentRecord.workspace_id ?? workspaceId,
+      content: documentRecord.content ?? `# ${title}\n\n`,
+    });
+
+    return {
+      ...mapToSummary(document),
+      workspaceId: document.workspaceId || workspaceId,
+    };
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to create document. Please try again.")
+    );
   }
-
-  const updatedAt = formatCurrentDate();
-  const newDocument: DocumentRecord = {
-    id: createDocumentId(title),
-    workspaceId,
-    title,
-    description: payload.description.trim(),
-    ownerName: "Workspace Guest",
-    status: "Draft",
-    updatedAt,
-    content: `# ${title}\n\n`,
-  };
-
-  setDocumentsStore([newDocument, ...getDocumentsStore()]);
-  touchWorkspace(workspaceId, updatedAt);
-  await wait(MOCK_DELAY_MS);
-  return mapToSummary(newDocument);
 };
 
 export const saveDocument = async (
@@ -121,53 +185,43 @@ export const saveDocument = async (
     throw new Error("Document content cannot be empty.");
   }
 
-  await wait(MOCK_DELAY_MS);
+  try {
+    const response = await api.put<
+      DocumentApiRecord | { document: DocumentApiRecord }
+    >(`/documents/${payload.id}`, {
+      title,
+      content,
+    });
 
-  const existingDocument = getDocumentsStore().find(
-    (document) => document.id === payload.id
-  );
+    const documentRecord =
+      "document" in response.data ? response.data.document : response.data;
+    const document = normalizeDocument({
+      ...documentRecord,
+      title,
+      content,
+      description:
+        documentRecord.description ??
+        content
+          .replace(/^#{1,6}\s+/gm, "")
+          .replace(/[`*_>#-]/g, "")
+          .trim()
+          .slice(0, 140),
+    });
 
-  if (!existingDocument) {
-    throw new Error("Document not found.");
+    return document;
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to save document. Please try again.")
+    );
   }
-
-  const updatedAt = formatCurrentDate();
-  const updatedDocument: DocumentRecord = {
-    ...existingDocument,
-    title,
-    content,
-    updatedAt,
-    description:
-      content
-        .replace(/^#{1,6}\s+/gm, "")
-        .replace(/[`*_>#-]/g, "")
-        .trim()
-        .slice(0, 140) || "No description added yet.",
-  };
-
-  setDocumentsStore(
-    getDocumentsStore().map((document) =>
-      document.id === payload.id ? updatedDocument : document
-    )
-  );
-  touchWorkspace(existingDocument.workspaceId, updatedAt);
-
-  return updatedDocument;
 };
 
 export const deleteDocument = async (documentId: string): Promise<void> => {
-  await wait(MOCK_DELAY_MS);
-
-  const documentToDelete = getDocumentsStore().find(
-    (document) => document.id === documentId
-  );
-
-  if (!documentToDelete) {
-    throw new Error("Document not found.");
+  try {
+    await api.delete(`/documents/${documentId}`);
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to delete document. Please try again.")
+    );
   }
-
-  setDocumentsStore(
-    getDocumentsStore().filter((document) => document.id !== documentId)
-  );
-  touchWorkspace(documentToDelete.workspaceId, formatCurrentDate());
 };

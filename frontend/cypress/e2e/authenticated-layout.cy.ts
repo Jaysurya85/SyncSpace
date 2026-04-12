@@ -13,6 +13,10 @@ describe("authenticated layout", () => {
           })
         );
         window.localStorage.setItem("syncspace-token", "e2e-jwt-token");
+        window.localStorage.setItem(
+          "syncspace-known-workspaces",
+          JSON.stringify(["ws-product-design-sprint"])
+        );
       },
     });
 
