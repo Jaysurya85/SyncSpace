@@ -283,6 +283,102 @@ func (h *WorkspaceHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, member)
 }
 
+// ListMembers lists all members of a workspace. Any member can access this.
+// @Summary      List workspace members
+// @Description  List all members of a workspace. Any workspace member can call this.
+// @Tags         workspaces
+// @Produce      json
+// @Security     BearerAuth
+// @Param        workspace_id path string true "Workspace ID"
+// @Success      200  {array}   workspaces.WorkspaceMember
+// @Failure      401  {object}  ErrorResponse
+// @Failure      403  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /api/workspaces/{workspace_id}/members [get]
+func (h *WorkspaceHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	claims, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	workspaceID := r.PathValue("workspace_id")
+	if workspaceID == "" {
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "workspace_id is required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	members, err := h.Store.ListMembers(ctx, workspaceID, claims.UserID)
+	if err != nil {
+		switch {
+		case errors.Is(err, workspaces.ErrForbidden):
+			writeJSON(w, http.StatusForbidden, ErrorResponse{Error: "access denied"})
+		case errors.Is(err, workspaces.ErrWorkspaceNotFound):
+			writeJSON(w, http.StatusNotFound, ErrorResponse{Error: "workspace not found"})
+		default:
+			log.Printf("ListMembers error: %v", err)
+			writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "internal server error"})
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, members)
+}
+
+// RemoveMember removes a member from a workspace. Only the owner can remove members.
+// @Summary      Remove workspace member
+// @Description  Remove a member from a workspace by user ID. Only the workspace owner can do this.
+// @Tags         workspaces
+// @Produce      json
+// @Security     BearerAuth
+// @Param        workspace_id path string true "Workspace ID"
+// @Param        user_id path string true "User ID to remove"
+// @Success      204
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      403  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /api/workspaces/{workspace_id}/members/{user_id} [delete]
+func (h *WorkspaceHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
+	claims, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	workspaceID := r.PathValue("workspace_id")
+	memberUserID := r.PathValue("user_id")
+	if workspaceID == "" || memberUserID == "" {
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "workspace_id and user_id are required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.Store.RemoveMember(ctx, workspaceID, claims.UserID, memberUserID); err != nil {
+		switch {
+		case errors.Is(err, workspaces.ErrForbidden):
+			writeJSON(w, http.StatusForbidden, ErrorResponse{Error: "access denied"})
+		case errors.Is(err, workspaces.ErrWorkspaceNotFound):
+			writeJSON(w, http.StatusNotFound, ErrorResponse{Error: "workspace not found"})
+		case errors.Is(err, workspaces.ErrUserNotFound):
+			writeJSON(w, http.StatusNotFound, ErrorResponse{Error: "member not found"})
+		default:
+			log.Printf("RemoveMember error: %v", err)
+			writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "internal server error"})
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // DeleteWorkspace deletes a workspace. Only the owner can delete the workspace.
 // @Summary      Delete workspace
 // @Description  Delete a workspace by ID. Only the workspace owner can delete it.

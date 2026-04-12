@@ -76,6 +76,8 @@ func main() {
 	mux.Handle("GET /api/workspaces/{workspace_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.GetWorkspace)))
 	mux.Handle("PUT /api/workspaces/{workspace_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.UpdateWorkspace)))
 	mux.Handle("POST /api/workspaces/{workspace_id}/members", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.AddMember)))
+	mux.Handle("GET /api/workspaces/{workspace_id}/members", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.ListMembers)))
+	mux.Handle("DELETE /api/workspaces/{workspace_id}/members/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.RemoveMember)))
 	mux.Handle("DELETE /api/workspaces/{workspace_id}", middleware.AuthMiddleware(http.HandlerFunc(workspaceHandler.DeleteWorkspace)))
 	mux.Handle("POST /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.CreateDocument)))
 	mux.Handle("GET /api/workspaces/{workspace_id}/documents", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.ListDocuments)))
