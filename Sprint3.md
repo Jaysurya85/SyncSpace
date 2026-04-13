@@ -1,45 +1,41 @@
 # Sprint 3
 
-Sprint 3 focused on expanding the SyncSpace backend with complete workspace management APIs, user CRUD operations, workspace member management, stronger test coverage, and task schema support for future work tracking features.
+Sprint 3 focused on expanding the SyncSpace backend with complete user CRUD operations, workspace management APIs beyond basic creation, workspace member management, task schema groundwork, and stronger test coverage across all modules.
 
 - [Issues page](https://github.com/Jaysurya85/SyncSpace/issues?q=is%3Aissue)
 - [Project Board](https://github.com/users/Jaysurya85/projects/1)
 
+- [Backend demo video](https://youtu.be/y5qQ0ThmJ0g?si=iW80YYJ4kSZ4SuoR)
+- [Frontend demo video](https://youtu.be/k-zPQjfAkaQ?si=otPCJMvznXDlgQwF)
+
 # Backend
 ## Completed Work
 
+### User APIs
+- User creation endpoint
+- Fetch the logged in user
+- Fetch user by ID
+- Update User 
+- User account deletion
+- Paginated user listing with `limit` and `offset` query parameters
+
 ### Workspace API Expansion
-- Added full workspace management support beyond basic creation
-- Implemented workspace listing for authenticated users
-- Implemented workspace fetch by ID for members
-- Implemented workspace edit/update for workspace owners
-- Implemented workspace deletion for workspace owners
+- Fetch workspace for authenticated users
+- Update workspace (only allowed to workspace owner)
+- Delete workspace (only allowed to workspace owner)
 
 ### Workspace Member Management
-- Added API to add members into a workspace
-- Added API to list all members of a workspace
-- Added API to remove members from a workspace
-- Supported adding members using either user ID or email
-- Enforced access control so only authorized users can manage membership
-
-### User APIs
-- Added user creation API
-- Added authenticated user profile fetch API (`/api/users/me`)
-- Added user fetch by ID API
-- Added user update API
-- Added user delete API
-- Added paginated user list API
-
-### Fetch and Edit Operations
-- Added fetch APIs for workspaces and users
-- Added edit/update APIs for workspaces, documents, and users
-- Preserved authorization checks so users can only edit resources they are allowed to manage
+- Add members to a workspace using either user ID or email
+- List all members of a workspace
+- Remove members from a workspace
+- Access control enforcement so only authorized users can manage membership
 
 ### Database Schema Updates
-- Added support for member relationships between users and workspaces
-- Added task table for task management groundwork
-  - Fields: id (UUID), workspace_id (FK), title, description, status, assigned_to (FK to users), created_by (FK to users), due_date, created_at, updated_at
-- Added `updated_at` support for users to track profile updates
+- **Workspace Members Table**: New join table for user–workspace membership
+  - Fields: workspace_id (FK to workspaces), user_id (FK to users)
+- **Tasks Table**: New table for future task management features
+  - Fields: id (UUID), workspace_id (FK to workspaces), title, description, status, assigned_to (FK to users), created_by (FK to users), due_date, created_at, updated_at
+- **Users Table**: Added `updated_at` field to track profile updates
 
 ### Backend API Endpoints
 
@@ -52,17 +48,11 @@ Sprint 3 focused on expanding the SyncSpace backend with complete workspace mana
 | PUT | `/api/users/{user_id}` | Update user profile | Yes |
 | DELETE | `/api/users/{user_id}` | Delete user account | Yes |
 | GET | `/api/workspaces` | List user workspaces | Yes |
-| GET | `/api/workspaces/{workspace_id}` | Fetch workspace details | Yes |
 | PUT | `/api/workspaces/{workspace_id}` | Edit workspace details | Yes |
 | DELETE | `/api/workspaces/{workspace_id}` | Delete workspace | Yes |
 | POST | `/api/workspaces/{workspace_id}/members` | Add workspace member | Yes |
 | GET | `/api/workspaces/{workspace_id}/members` | List workspace members | Yes |
 | DELETE | `/api/workspaces/{workspace_id}/members/{user_id}` | Remove workspace member | Yes |
-| POST | `/api/workspaces/{workspace_id}/documents` | Create document | Yes |
-| GET | `/api/workspaces/{workspace_id}/documents` | List workspace documents | Yes |
-| GET | `/api/documents/{document_id}` | Fetch document | Yes |
-| PUT | `/api/documents/{document_id}` | Edit document | Yes |
-| DELETE | `/api/documents/{document_id}` | Delete document | Yes |
 
 ### Backend Testing
 
@@ -74,6 +64,14 @@ Sprint 3 focused on expanding the SyncSpace backend with complete workspace mana
 | **Authentication Middleware** | Valid token acceptance, Invalid token rejection, Missing token rejection | ✅ Passing |
 | **JWT Authentication** | Generate valid token, Validate valid token, Reject invalid token | ✅ Passing |
 | **Google OAuth** | Missing token, Invalid JSON, Invalid Google token | ✅ Passing |
+
+### Test Coverage
+
+| Package | Coverage |
+|---------|----------|
+| `internal/auth` | 64.5% |
+| `internal/handlers` | 76.2% |
+| `internal/middleware` | 81.0% |
 
 ## API Documentation
 
@@ -110,6 +108,20 @@ Sprint 3 focused on expanding the SyncSpace backend with complete workspace mana
 ```bash
 # Headers: Authorization: Bearer <token>
 # Response (200): Authenticated user object
+```
+
+**GET /api/users/{user_id}**
+```bash
+# Headers: Authorization: Bearer <token>
+# Response (200)
+{
+  "id": "uuid",
+  "email": "string",
+  "name": "string",
+  "profile_pic": "string",
+  "created_at": "timestamp",
+  "updated_at": "timestamp"
+}
 ```
 
 **PUT /api/users/{user_id}**
@@ -196,6 +208,95 @@ Sprint 3 focused on expanding the SyncSpace backend with complete workspace mana
 | 409 | `{"error": "user with this email already exists"}` |
 | 500 | `{"error": "internal server error"}` |
 
+### Sprint 3 Status: **COMPLETE**
+
+All planned Sprint 3 backend enhancements have been implemented, tested, and documented that includes
+- User APIs 
+- Workspace management  
+- Member management 
+- Database schema updates for tasks and members.
+
+
+# Frontend
+
+## Completed Work
+
+### Workspace-first application architecture
+- Replaced the old top-level document model with a workspace-first structure
+- Added a global authenticated home page at `/home` for the workspace hub
+- Added workspace-scoped routes:
+  - `/workspaces/:workspaceId/home`
+  - `/workspaces/:workspaceId/documents`
+  - `/workspaces/:workspaceId/documents/:documentId`
+  - `/workspaces/:workspaceId/teams`
+  - `/workspaces/:workspaceId/tasks`
+- Removed Chat from the workspace navigation
+
+### Authenticated layouts
+- Split authenticated UI into two layouts:
+  - global authenticated layout for the workspace hub
+  - workspace layout with a left sidebar for workspace-scoped pages
+- Added a workspace switcher in the sidebar
+- Added a separate create-workspace action in the workspace shell
+
+### Workspace management
+- Integrated real workspace APIs for:
+  - list workspaces
+  - create workspace
+  - get one workspace
+  - update workspace name
+  - delete workspace
+- Added inline workspace rename from the selected workspace header
+- Added workspace delete from the global workspace hub
+- Added proper empty state handling when no workspaces exist
+
+### Document management
+- Scoped all documents to a selected workspace
+- Integrated real document APIs for:
+  - list documents in a workspace
+  - create document in a workspace
+  - get one document
+  - update document
+  - delete document
+- Added proper empty state handling when a workspace has no documents
+- Added document delete from:
+  - workspace documents page
+  - workspace home recent-documents section
+  - document editor page
+
+### Document editor
+- Built a rich text document editor with a title input, formatting toolbar, and manual save
+- Kept markdown as the saved format
+- Added loading, saving, success, and error states
+- Improved the editor UI to better match the app theme
+- Fixed list marker visibility and editor selection behavior issues
+
+### API integration and frontend behavior
+- Replaced temporary frontend-only workspace/document storage with real backend integration
+- Added centralized request and response logging in the shared API client
+- Added the ngrok header required by the backend environment
+- Updated the frontend to match the backend contract changes:
+  - workspace uses only `name`
+  - document creation uses `title` and `content`
+  - removed old description and summary assumptions
+
+### UI refinements
+- Removed redundant page header blocks from:
+  - global home
+  - workspace home
+  - workspace documents page
+  - document editor page
+- Improved workspace switcher behavior with outside-click close
+- Added lightweight animations for workspace shell interactions
+
+### Testing
+- Added Cypress end-to-end coverage for the main Sprint 3 flows:
+  - workspace create and delete
+  - workspace switcher and rename
+  - empty document state
+  - document create, save, and delete
+  - document delete from workspace home
+
 ### Sprint 3 Status: ✅ **COMPLETE**
 
-All planned Sprint 3 backend enhancements have been implemented, including workspace APIs, user APIs, member management, fetch and edit flows, database task table creation, and additional unit test coverage.
+The frontend is now organized around workspaces, connected to the backend APIs, and supports the full workspace/document flow required for the current product scope.
