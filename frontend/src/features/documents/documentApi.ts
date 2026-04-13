@@ -14,8 +14,6 @@ interface DocumentApiRecord {
   workspaceId?: string | number | null;
   title?: string | null;
   name?: string | null;
-  description?: string | null;
-  summary?: string | null;
   owner_name?: string | null;
   ownerName?: string | null;
   status?: string | null;
@@ -55,7 +53,6 @@ const normalizeDocument = (document: DocumentApiRecord): DocumentRecord => ({
   id: String(document.id ?? document._id ?? ""),
   workspaceId: String(document.workspace_id ?? document.workspaceId ?? ""),
   title: document.title ?? document.name ?? "Untitled document",
-  description: document.description ?? document.summary ?? "",
   ownerName: document.owner_name ?? document.ownerName ?? "Workspace owner",
   status: document.status ?? "Draft",
   updatedAt: toDisplayDate(
@@ -71,7 +68,6 @@ const mapToSummary = (document: DocumentRecord): DocumentSummary => ({
   id: document.id,
   workspaceId: document.workspaceId,
   title: document.title,
-  description: document.description,
   ownerName: document.ownerName,
   status: document.status,
   updatedAt: document.updatedAt,
@@ -96,6 +92,10 @@ export const fetchWorkspaceDocuments = async (
       `/workspaces/${workspaceId}/documents`
     );
 
+    if (!response.data) {
+      return [];
+    }
+
     const documents = Array.isArray(response.data)
       ? response.data
       : response.data.documents ?? response.data.data ?? [];
@@ -108,6 +108,13 @@ export const fetchWorkspaceDocuments = async (
         workspaceId: document.workspaceId || workspaceId,
       }));
   } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 404 || error.response?.status === 204)
+    ) {
+      return [];
+    }
+
     throw new Error(
       getErrorMessage(error, "Failed to load documents. Please try again.")
     );
@@ -148,7 +155,6 @@ export const createWorkspaceDocument = async (
       DocumentApiRecord | { document: DocumentApiRecord }
     >(`/workspaces/${workspaceId}/documents`, {
       title,
-      description: payload.description.trim(),
       content: `# ${title}\n\n`,
     });
 
@@ -199,13 +205,6 @@ export const saveDocument = async (
       ...documentRecord,
       title,
       content,
-      description:
-        documentRecord.description ??
-        content
-          .replace(/^#{1,6}\s+/gm, "")
-          .replace(/[`*_>#-]/g, "")
-          .trim()
-          .slice(0, 140),
     });
 
     return document;

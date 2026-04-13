@@ -1,27 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import FeaturePageShell from "../../../shared/components/FeaturePageShell";
 import Button from "../../../shared/components/Button";
 import Input from "../../../shared/components/Input";
 import WorkspaceCard from "../../workspaces/components/WorkspaceCard";
 import {
   createWorkspace,
+  deleteWorkspace,
   fetchWorkspaces,
 } from "../../workspaces/workspacesApi";
 import type { WorkspaceSummary } from "../../workspaces/workspaceTypes";
-import { useAuth } from "../useAuth";
-
 const HomePage = () => {
   const navigate = useNavigate();
   const nameInputRef = useRef<HTMLDivElement | null>(null);
-  const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -30,6 +30,7 @@ const HomePage = () => {
       try {
         setIsLoading(true);
         setLoadError(null);
+        setDeleteError(null);
         const nextWorkspaces = await fetchWorkspaces();
 
         if (isMounted) {
@@ -70,15 +71,14 @@ const HomePage = () => {
     try {
       setIsCreating(true);
       setCreateError(null);
+      setDeleteError(null);
 
       const newWorkspace = await createWorkspace({
         name: name.trim(),
-        description: description.trim(),
       });
 
       setWorkspaces((currentWorkspaces) => [newWorkspace, ...currentWorkspaces]);
       setName("");
-      setDescription("");
       navigate(`/workspaces/${newWorkspace.id}/home`);
     } catch (error) {
       setCreateError(
@@ -91,12 +91,29 @@ const HomePage = () => {
     }
   };
 
+  const handleDeleteWorkspace = async (workspace: WorkspaceSummary) => {
+    try {
+      setDeletingWorkspaceId(workspace.id);
+      setDeleteError(null);
+      await deleteWorkspace(workspace.id);
+      setWorkspaces((currentWorkspaces) =>
+        currentWorkspaces.filter(
+          (currentWorkspace) => currentWorkspace.id !== workspace.id
+        )
+      );
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete workspace. Please try again."
+      );
+    } finally {
+      setDeletingWorkspaceId(null);
+    }
+  };
+
   return (
-    <FeaturePageShell
-      eyebrow="Global Home"
-      title={`Welcome back${user.name ? `, ${user.name}` : ""}`}
-      description="This is the app-level workspace hub. Pick an existing workspace or create a new one before entering the workspace-scoped navigation and pages."
-    >
+    <section className="space-y-6">
       <section className="grid gap-6 xl:grid-cols-[1.18fr_0.82fr]">
         <section className="space-y-5">
           <div className="overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-primary-light via-surface to-background shadow-sm">
@@ -124,7 +141,7 @@ const HomePage = () => {
                     {workspaces.length}
                   </p>
                   <p className="mt-1 text-sm text-text-secondary">
-                    Known to the frontend until backend listing is added
+                    Available from the backend workspace list
                   </p>
                 </div>
 
@@ -194,15 +211,26 @@ const HomePage = () => {
                     nameInputRef.current?.querySelector("input")?.focus()
                   }
                 >
-                  Create your first workspace
+                  + Create your first workspace
                 </Button>
+              </div>
+            ) : null}
+
+            {!isLoading && !loadError && deleteError ? (
+              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
+                <p className="text-sm font-medium text-red-700">{deleteError}</p>
               </div>
             ) : null}
 
             {!isLoading && !loadError && workspaces.length > 0 ? (
               <div className="mt-6 grid gap-4 lg:grid-cols-2">
                 {workspaces.map((workspace) => (
-                  <WorkspaceCard key={workspace.id} workspace={workspace} />
+                  <WorkspaceCard
+                    key={workspace.id}
+                    workspace={workspace}
+                    isDeleting={deletingWorkspaceId === workspace.id}
+                    onDelete={handleDeleteWorkspace}
+                  />
                 ))}
               </div>
             ) : null}
@@ -220,9 +248,8 @@ const HomePage = () => {
             Start a new workspace
           </h2>
           <p className="mt-2 text-sm leading-6 text-text-secondary">
-            This is the app-level creation flow. New workspaces are locally
-            tracked for now so the architecture is ready before backend listing
-            support arrives.
+            This is the app-level creation flow. Create a workspace here, then
+            enter it to access workspace-scoped documents, teams, and tasks.
           </p>
 
           <div className="mt-6 space-y-4">
@@ -237,23 +264,6 @@ const HomePage = () => {
                 }
               />
             </div>
-
-            <div className="w-full">
-              <label
-                htmlFor="workspace-description"
-                className="block text-sm font-medium text-text-primary"
-              >
-                Description
-              </label>
-              <textarea
-                id="workspace-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe the team's focus for this workspace."
-                rows={5}
-                className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
           </div>
 
           {createError && !createError.includes("name") ? (
@@ -265,12 +275,12 @@ const HomePage = () => {
               Global workspace flow
             </p>
             <Button type="submit" loading={isCreating}>
-              Create workspace
+              + Create workspace
             </Button>
           </div>
         </form>
       </section>
-    </FeaturePageShell>
+    </section>
   );
 };
 

@@ -9,14 +9,12 @@ const WorkspaceCreateAction = () => {
   const { createWorkspaceFromShell } = useWorkspaceShell();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const closeModal = () => {
     setIsOpen(false);
     setName("");
-    setDescription("");
     setCreateError(null);
   };
 
@@ -36,7 +34,6 @@ const WorkspaceCreateAction = () => {
 
       const newWorkspace = await createWorkspaceFromShell({
         name: name.trim(),
-        description: description.trim(),
       });
 
       closeModal();
@@ -59,7 +56,7 @@ const WorkspaceCreateAction = () => {
         className="mt-3 w-full rounded-2xl"
         onClick={() => setIsOpen(true)}
       >
-        Create Workspace
+        + Create Workspace
       </Button>
 
       {isOpen ? (
@@ -99,23 +96,6 @@ const WorkspaceCreateAction = () => {
                 }
               />
 
-              <div>
-                <label
-                  htmlFor="workspace-create-description"
-                  className="block text-sm font-medium text-text-primary"
-                >
-                  Description
-                </label>
-                <textarea
-                  id="workspace-create-description"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  rows={4}
-                  placeholder="Describe the purpose of this workspace."
-                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
               {createError && !createError.includes("name") ? (
                 <p className="text-sm text-red-600">{createError}</p>
               ) : null}
@@ -129,7 +109,7 @@ const WorkspaceCreateAction = () => {
                   Cancel
                 </Button>
                 <Button type="submit" loading={isCreating}>
-                  Create workspace
+                  + Create workspace
                 </Button>
               </div>
             </form>

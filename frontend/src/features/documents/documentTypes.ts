@@ -2,7 +2,6 @@ export interface DocumentSummary {
   id: string;
   workspaceId: string;
   title: string;
-  description: string;
   ownerName: string;
   status: string;
   updatedAt: string;
@@ -14,7 +13,6 @@ export interface DocumentRecord extends DocumentSummary {
 
 export interface CreateDocumentPayload {
   title: string;
-  description: string;
 }
 
 export interface SaveDocumentPayload {

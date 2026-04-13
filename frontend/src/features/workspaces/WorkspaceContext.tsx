@@ -10,8 +10,14 @@ import {
   createWorkspace,
   fetchWorkspaceById,
   fetchWorkspaces,
+  updateWorkspace,
 } from "./workspacesApi";
-import type { CreateWorkspacePayload, WorkspaceSummary } from "./workspaceTypes";
+import { fetchWorkspaceDocuments } from "../documents/documentApi";
+import type {
+  CreateWorkspacePayload,
+  UpdateWorkspacePayload,
+  WorkspaceSummary,
+} from "./workspaceTypes";
 import { WorkspaceContext } from "./workspaceShellContext";
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
@@ -48,7 +54,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      setCurrentWorkspace(nextWorkspace);
+      const workspaceDocuments = await fetchWorkspaceDocuments(workspaceId);
+
+      setCurrentWorkspace({
+        ...nextWorkspace,
+        documentCount: workspaceDocuments.length,
+      });
     } catch (workspaceError) {
       setCurrentWorkspace(null);
       setError(
@@ -74,6 +85,40 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
+  const updateWorkspaceFromShell = useCallback(
+    async (targetWorkspaceId: string, payload: UpdateWorkspacePayload) => {
+      const updatedWorkspace = await updateWorkspace(targetWorkspaceId, payload);
+
+      setWorkspaces((currentWorkspaces) =>
+        currentWorkspaces.map((workspace) =>
+          workspace.id === targetWorkspaceId
+            ? {
+                ...workspace,
+                ...updatedWorkspace,
+                documentCount:
+                  updatedWorkspace.documentCount ?? workspace.documentCount,
+              }
+            : workspace
+        )
+      );
+
+      setCurrentWorkspace((currentWorkspaceValue) =>
+        currentWorkspaceValue?.id === targetWorkspaceId
+          ? {
+              ...currentWorkspaceValue,
+              ...updatedWorkspace,
+              documentCount:
+                updatedWorkspace.documentCount ??
+                currentWorkspaceValue.documentCount,
+            }
+          : currentWorkspaceValue
+      );
+
+      return updatedWorkspace;
+    },
+    []
+  );
+
   const value = useMemo(
     () => ({
       currentWorkspace,
@@ -82,8 +127,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       error,
       refreshWorkspaces: loadWorkspaceData,
       createWorkspaceFromShell,
+      updateWorkspaceFromShell,
     }),
-    [currentWorkspace, workspaces, isLoading, error, loadWorkspaceData, createWorkspaceFromShell]
+    [
+      currentWorkspace,
+      workspaces,
+      isLoading,
+      error,
+      loadWorkspaceData,
+      createWorkspaceFromShell,
+      updateWorkspaceFromShell,
+    ]
   );
 
   return (

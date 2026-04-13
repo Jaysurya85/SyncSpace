@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import FeaturePageShell from "../../../shared/components/FeaturePageShell";
 import Button from "../../../shared/components/Button";
 import {
+  deleteDocument,
   fetchDocumentById,
   saveDocument,
 } from "../documentApi";
@@ -16,6 +17,7 @@ import { useWorkspaceShell } from "../../workspaces/workspaceShellContext";
 const DocumentEditor = lazy(() => import("../components/DocumentEditor"));
 
 const DocumentDetailsPage = () => {
+  const navigate = useNavigate();
   const { workspaceId, documentId } = useParams();
   const { currentWorkspace } = useWorkspaceShell();
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | null>(
@@ -28,6 +30,7 @@ const DocumentDetailsPage = () => {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!workspaceId || !documentId) {
@@ -117,6 +120,28 @@ const DocumentDetailsPage = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!documentId || !workspaceId) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      setSaveError(null);
+      setSaveSuccess(null);
+      await deleteDocument(documentId);
+      navigate(`/workspaces/${workspaceId}/documents`);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete the document."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <FeaturePageShell
@@ -148,11 +173,7 @@ const DocumentDetailsPage = () => {
   }
 
   return (
-    <FeaturePageShell
-      eyebrow={currentWorkspace ? currentWorkspace.name : "Workspace"}
-      title="Writing space"
-      description="This document is nested under a workspace route and keeps markdown persistence with a simple manual save flow."
-    >
+    <section className="space-y-6">
       <section className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-text-secondary shadow-sm">
           <Link
@@ -192,14 +213,24 @@ const DocumentDetailsPage = () => {
             </div>
 
             <div className="flex flex-col items-start gap-3 lg:items-end">
-              <Button
-                type="button"
-                loading={isSaving}
-                onClick={handleSave}
-                className="rounded-full border-0 bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
-              >
-                Save
-              </Button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting || isSaving}
+                  className="rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isDeleting ? "Deleting..." : "🗑️ Delete"}
+                </button>
+                <Button
+                  type="button"
+                  loading={isSaving}
+                  onClick={handleSave}
+                  className="rounded-full border-0 bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
+                >
+                  Save
+                </Button>
+              </div>
               <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">
                 Manual save
               </p>
@@ -251,7 +282,7 @@ const DocumentDetailsPage = () => {
           </div>
         </div>
       </section>
-    </FeaturePageShell>
+    </section>
   );
 };
 

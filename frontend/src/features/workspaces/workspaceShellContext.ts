@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import type {
   CreateWorkspacePayload,
+  UpdateWorkspacePayload,
   WorkspaceSummary,
 } from "./workspaceTypes";
 
@@ -12,6 +13,10 @@ export interface WorkspaceContextValue {
   refreshWorkspaces: () => Promise<void>;
   createWorkspaceFromShell: (
     payload: CreateWorkspacePayload
+  ) => Promise<WorkspaceSummary>;
+  updateWorkspaceFromShell: (
+    workspaceId: string,
+    payload: UpdateWorkspacePayload
   ) => Promise<WorkspaceSummary>;
 }
 

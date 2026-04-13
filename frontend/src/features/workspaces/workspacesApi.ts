@@ -1,9 +1,8 @@
 import axios from "axios";
 import { api } from "../../services/api";
-import { fetchWorkspaceDocuments } from "../documents/documentApi";
-import { forgetWorkspaceId, getKnownWorkspaceIds, rememberWorkspaceId } from "./workspaceRegistry";
 import type {
   CreateWorkspacePayload,
+  UpdateWorkspacePayload,
   WorkspaceRecord,
   WorkspaceSummary,
 } from "./workspaceTypes";
@@ -13,14 +12,19 @@ interface WorkspaceApiRecord {
   _id?: string | number;
   name?: string | null;
   title?: string | null;
-  description?: string | null;
-  summary?: string | null;
   owner_name?: string | null;
   ownerName?: string | null;
   updated_at?: string | null;
   updatedAt?: string | null;
   created_at?: string | null;
   createdAt?: string | null;
+  document_count?: number | null;
+  documentCount?: number | null;
+}
+
+interface WorkspaceListResponse {
+  workspaces?: WorkspaceApiRecord[];
+  data?: WorkspaceApiRecord[];
 }
 
 const toDisplayDate = (value?: string | null) => {
@@ -44,7 +48,6 @@ const toDisplayDate = (value?: string | null) => {
 const normalizeWorkspace = (workspace: WorkspaceApiRecord): WorkspaceRecord => ({
   id: String(workspace.id ?? workspace._id ?? ""),
   name: workspace.name ?? workspace.title ?? "Untitled workspace",
-  description: workspace.description ?? workspace.summary ?? "",
   ownerName: workspace.owner_name ?? workspace.ownerName ?? "Workspace owner",
   updatedAt: toDisplayDate(
     workspace.updated_at ??
@@ -52,6 +55,14 @@ const normalizeWorkspace = (workspace: WorkspaceApiRecord): WorkspaceRecord => (
       workspace.created_at ??
       workspace.createdAt
   ),
+});
+
+const normalizeWorkspaceSummary = (
+  workspace: WorkspaceApiRecord
+): WorkspaceSummary => ({
+  ...normalizeWorkspace(workspace),
+  documentCount:
+    workspace.document_count ?? workspace.documentCount ?? undefined,
 });
 
 const getErrorMessage = (error: unknown, fallbackMessage: string) => {
@@ -65,15 +76,35 @@ const getErrorMessage = (error: unknown, fallbackMessage: string) => {
   return fallbackMessage;
 };
 
-const toWorkspaceSummary = async (
-  workspace: WorkspaceRecord
-): Promise<WorkspaceSummary> => {
-  const documents = await fetchWorkspaceDocuments(workspace.id);
+export const fetchWorkspaces = async (): Promise<WorkspaceSummary[]> => {
+  try {
+    const response = await api.get<WorkspaceListResponse | WorkspaceApiRecord[]>(
+      "/workspaces"
+    );
 
-  return {
-    ...workspace,
-    documentCount: documents.length,
-  };
+    if (!response.data) {
+      return [];
+    }
+
+    const workspaces = Array.isArray(response.data)
+      ? response.data
+      : response.data.workspaces ?? response.data.data ?? [];
+
+    return workspaces
+      .map(normalizeWorkspaceSummary)
+      .filter((workspace) => workspace.id);
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 404 || error.response?.status === 204)
+    ) {
+      return [];
+    }
+
+    throw new Error(
+      getErrorMessage(error, "Failed to load workspaces. Please try again.")
+    );
+  }
 };
 
 export const fetchWorkspaceById = async (
@@ -81,17 +112,11 @@ export const fetchWorkspaceById = async (
 ): Promise<WorkspaceSummary | null> => {
   try {
     const response = await api.get<WorkspaceApiRecord>(`/workspaces/${workspaceId}`);
-    const workspace = normalizeWorkspace(response.data);
+    const workspace = normalizeWorkspaceSummary(response.data);
 
-    if (!workspace.id) {
-      return null;
-    }
-
-    rememberWorkspaceId(workspace.id);
-    return toWorkspaceSummary(workspace);
+    return workspace.id ? workspace : null;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
-      forgetWorkspaceId(workspaceId);
       return null;
     }
 
@@ -99,30 +124,6 @@ export const fetchWorkspaceById = async (
       getErrorMessage(error, "Failed to load workspace. Please try again.")
     );
   }
-};
-
-export const fetchWorkspaces = async (): Promise<WorkspaceSummary[]> => {
-  const workspaceIds = getKnownWorkspaceIds();
-
-  if (workspaceIds.length === 0) {
-    return [];
-  }
-
-  const results = await Promise.allSettled(
-    workspaceIds.map((workspaceId) => fetchWorkspaceById(workspaceId))
-  );
-
-  return results.flatMap((result, index) => {
-    if (result.status === "fulfilled" && result.value) {
-      return [result.value];
-    }
-
-    if (result.status === "fulfilled" && !result.value) {
-      forgetWorkspaceId(workspaceIds[index]);
-    }
-
-    return [];
-  });
 };
 
 export const createWorkspace = async (
@@ -135,30 +136,70 @@ export const createWorkspace = async (
   }
 
   try {
-    const response = await api.post<WorkspaceApiRecord | { workspace: WorkspaceApiRecord }>(
-      "/workspaces",
-      {
-        name,
-        description: payload.description.trim(),
-      }
-    );
+    const response = await api.post<
+      WorkspaceApiRecord | { workspace: WorkspaceApiRecord }
+    >("/workspaces", {
+      name,
+    });
 
     const workspaceRecord =
       "workspace" in response.data ? response.data.workspace : response.data;
-    const workspace = normalizeWorkspace(workspaceRecord);
+    const workspace = normalizeWorkspaceSummary(workspaceRecord);
 
     if (!workspace.id) {
       throw new Error("Workspace creation did not return an ID.");
     }
 
-    rememberWorkspaceId(workspace.id);
     return {
       ...workspace,
-      documentCount: 0,
+      documentCount: workspace.documentCount ?? 0,
     };
   } catch (error) {
     throw new Error(
       getErrorMessage(error, "Failed to create workspace. Please try again.")
+    );
+  }
+};
+
+export const updateWorkspace = async (
+  workspaceId: string,
+  payload: UpdateWorkspacePayload
+): Promise<WorkspaceSummary> => {
+  const name = payload.name.trim();
+
+  if (!name) {
+    throw new Error("Workspace name is required.");
+  }
+
+  try {
+    const response = await api.put<
+      WorkspaceApiRecord | { workspace: WorkspaceApiRecord }
+    >(`/workspaces/${workspaceId}`, {
+      name,
+    });
+
+    const workspaceRecord =
+      "workspace" in response.data ? response.data.workspace : response.data;
+    const workspace = normalizeWorkspaceSummary({
+      ...workspaceRecord,
+      id: workspaceRecord.id ?? workspaceId,
+      name,
+    });
+
+    return workspace;
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to update workspace. Please try again.")
+    );
+  }
+};
+
+export const deleteWorkspace = async (workspaceId: string): Promise<void> => {
+  try {
+    await api.delete(`/workspaces/${workspaceId}`);
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to delete workspace. Please try again.")
     );
   }
 };

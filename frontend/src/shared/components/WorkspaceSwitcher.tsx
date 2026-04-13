@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useWorkspaceShell } from "../../features/workspaces/workspaceShellContext";
 
@@ -7,6 +7,7 @@ const WorkspaceSwitcher = () => {
   const location = useLocation();
   const { currentWorkspace, workspaces } = useWorkspaceShell();
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const otherWorkspaces = useMemo(
     () =>
@@ -14,9 +15,34 @@ const WorkspaceSwitcher = () => {
     [workspaces, currentWorkspace]
   );
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [isOpen]);
+
   if (!currentWorkspace) {
     return null;
   }
+
+  const currentWorkspaceSubtitle =
+    currentWorkspace.documentCount !== undefined
+      ? `${currentWorkspace.documentCount} document${
+          currentWorkspace.documentCount === 1 ? "" : "s"
+        }`
+      : "Selected workspace";
 
   const getWorkspaceTargetPath = (nextWorkspaceId: string) => {
     const currentPath = location.pathname;
@@ -40,7 +66,7 @@ const WorkspaceSwitcher = () => {
   };
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((currentState) => !currentState)}
@@ -55,8 +81,7 @@ const WorkspaceSwitcher = () => {
               {currentWorkspace.name}
             </p>
             <p className="truncate text-sm text-text-secondary">
-              {currentWorkspace.documentCount} document
-              {currentWorkspace.documentCount === 1 ? "" : "s"}
+              {currentWorkspaceSubtitle}
             </p>
           </div>
           <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
@@ -102,8 +127,11 @@ const WorkspaceSwitcher = () => {
                     {workspace.name}
                   </p>
                   <p className="mt-1 text-xs text-text-secondary">
-                    {workspace.documentCount} document
-                    {workspace.documentCount === 1 ? "" : "s"}
+                    {workspace.documentCount !== undefined
+                      ? `${workspace.documentCount} document${
+                          workspace.documentCount === 1 ? "" : "s"
+                        }`
+                      : "Available workspace"}
                   </p>
                 </button>
               ))}

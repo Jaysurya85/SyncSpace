@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import FeaturePageShell from "../../../shared/components/FeaturePageShell";
 import Button from "../../../shared/components/Button";
 import Input from "../../../shared/components/Input";
 import DocumentCard from "../../documents/components/DocumentCard";
 import {
   createWorkspaceDocument,
+  deleteDocument,
   fetchWorkspaceDocuments,
 } from "../../documents/documentApi";
 import type { DocumentSummary } from "../../documents/documentTypes";
@@ -19,9 +19,12 @@ const WorkspaceDocumentsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (!currentWorkspace) {
@@ -34,6 +37,7 @@ const WorkspaceDocumentsPage = () => {
       try {
         setIsLoading(true);
         setLoadError(null);
+        setDeleteError(null);
         const nextDocuments = await fetchWorkspaceDocuments(currentWorkspace.id);
 
         if (isMounted) {
@@ -78,15 +82,14 @@ const WorkspaceDocumentsPage = () => {
     try {
       setIsCreating(true);
       setCreateError(null);
+      setDeleteError(null);
 
       const newDocument = await createWorkspaceDocument(currentWorkspace.id, {
         title: title.trim(),
-        description: description.trim(),
       });
 
       setDocuments((currentDocuments) => [newDocument, ...currentDocuments]);
       setTitle("");
-      setDescription("");
       navigate(`/workspaces/${currentWorkspace.id}/documents/${newDocument.id}`);
     } catch (error) {
       setCreateError(
@@ -99,12 +102,29 @@ const WorkspaceDocumentsPage = () => {
     }
   };
 
+  const handleDeleteDocument = async (document: DocumentSummary) => {
+    try {
+      setDeletingDocumentId(document.id);
+      setDeleteError(null);
+      await deleteDocument(document.id);
+      setDocuments((currentDocuments) =>
+        currentDocuments.filter(
+          (currentDocument) => currentDocument.id !== document.id
+        )
+      );
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete document. Please try again."
+      );
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
+
   return (
-    <FeaturePageShell
-      eyebrow="Documents"
-      title={`${currentWorkspace.name} documents`}
-      description="This page is fully scoped to the selected workspace. Create, open, and manage only the documents that belong to this workspace."
-    >
+    <section className="space-y-6">
       <section className="grid gap-5 xl:grid-cols-[0.78fr_1.22fr]">
         <form
           onSubmit={handleCreateDocument}
@@ -131,23 +151,6 @@ const WorkspaceDocumentsPage = () => {
                 error={
                   createError?.includes("title") ? createError : undefined
                 }
-              />
-            </div>
-
-            <div className="w-full">
-              <label
-                htmlFor="workspace-document-description"
-                className="block text-sm font-medium text-text-primary"
-              >
-                Summary
-              </label>
-              <textarea
-                id="workspace-document-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Add a short summary for this workspace document."
-                rows={4}
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-text-primary transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -198,6 +201,12 @@ const WorkspaceDocumentsPage = () => {
             </div>
           ) : null}
 
+          {!isLoading && !loadError && deleteError ? (
+            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
+              <p className="text-sm font-medium text-red-700">{deleteError}</p>
+            </div>
+          ) : null}
+
           {!isLoading && !loadError && documents.length === 0 ? (
             <div className="mt-6 rounded-[24px] border border-dashed border-border bg-background p-8 text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
@@ -225,13 +234,18 @@ const WorkspaceDocumentsPage = () => {
           {!isLoading && !loadError && documents.length > 0 ? (
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
               {documents.map((document) => (
-                <DocumentCard key={document.id} document={document} />
+                <DocumentCard
+                  key={document.id}
+                  document={document}
+                  isDeleting={deletingDocumentId === document.id}
+                  onDelete={handleDeleteDocument}
+                />
               ))}
             </div>
           ) : null}
         </section>
       </section>
-    </FeaturePageShell>
+    </section>
   );
 };
 

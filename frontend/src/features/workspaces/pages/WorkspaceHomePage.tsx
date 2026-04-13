@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import FeaturePageShell from "../../../shared/components/FeaturePageShell";
-import { fetchWorkspaceDocuments } from "../../documents/documentApi";
+import {
+  deleteDocument,
+  fetchWorkspaceDocuments,
+} from "../../documents/documentApi";
 import type { DocumentSummary } from "../../documents/documentTypes";
 import { useWorkspaceShell } from "../workspaceShellContext";
 
 const WorkspaceHomePage = () => {
   const { currentWorkspace } = useWorkspaceShell();
   const [recentDocuments, setRecentDocuments] = useState<DocumentSummary[]>([]);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (!currentWorkspace) {
@@ -17,6 +23,7 @@ const WorkspaceHomePage = () => {
     let isMounted = true;
 
     const loadRecentDocuments = async () => {
+      setDeleteError(null);
       const documents = await fetchWorkspaceDocuments(currentWorkspace.id);
 
       if (isMounted) {
@@ -35,12 +42,32 @@ const WorkspaceHomePage = () => {
     return null;
   }
 
+  const workspaceDocumentCount =
+    currentWorkspace.documentCount ?? recentDocuments.length;
+
+  const handleDeleteDocument = async (document: DocumentSummary) => {
+    try {
+      setDeletingDocumentId(document.id);
+      setDeleteError(null);
+      await deleteDocument(document.id);
+      setRecentDocuments((currentDocuments) =>
+        currentDocuments.filter(
+          (currentDocument) => currentDocument.id !== document.id
+        )
+      );
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete document. Please try again."
+      );
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
+
   return (
-    <FeaturePageShell
-      eyebrow="Workspace Home"
-      title={currentWorkspace.name}
-      description="This is the workspace-scoped home page. From here, move into workspace documents, teams, and tasks using the sidebar."
-    >
+    <section className="space-y-6">
       <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-[28px] border border-border bg-surface p-6 shadow-sm">
           <div className="grid gap-4 sm:grid-cols-3">
@@ -49,7 +76,7 @@ const WorkspaceHomePage = () => {
                 Documents
               </p>
               <p className="mt-3 text-3xl font-semibold text-text-primary">
-                {currentWorkspace.documentCount}
+                {workspaceDocumentCount}
               </p>
               <p className="mt-1 text-sm text-text-secondary">
                 Files in this workspace
@@ -160,6 +187,12 @@ const WorkspaceHomePage = () => {
         </div>
 
         <div className="mt-5 grid gap-4">
+          {deleteError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-700">{deleteError}</p>
+            </div>
+          ) : null}
+
           {recentDocuments.length === 0 ? (
             <div className="rounded-[24px] border border-dashed border-border bg-background p-8 text-center">
               <h3 className="text-xl font-semibold text-text-primary">
@@ -172,36 +205,49 @@ const WorkspaceHomePage = () => {
             </div>
           ) : (
             recentDocuments.map((document) => (
-              <Link
+              <div
                 key={document.id}
-                to={`/workspaces/${currentWorkspace.id}/documents/${document.id}`}
                 className="rounded-2xl border border-border bg-background p-4 transition hover:border-primary/25"
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold text-text-primary">
-                        {document.title}
-                      </h3>
+                      <Link
+                        to={`/workspaces/${currentWorkspace.id}/documents/${document.id}`}
+                        className="group"
+                      >
+                        <h3 className="text-base font-semibold text-text-primary group-hover:text-primary">
+                          {document.title}
+                        </h3>
+                      </Link>
                       <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-semibold text-primary">
                         {document.status}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-text-secondary">
-                      {document.description || "No description added yet."}
-                    </p>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
-                    Updated {document.updatedAt}
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
+                      Updated {document.updatedAt}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDocument(document)}
+                      disabled={deletingDocumentId === document.id}
+                      className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      aria-label={`Delete ${document.title}`}
+                      title={`Delete ${document.title}`}
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))
           )}
         </div>
       </section>
-    </FeaturePageShell>
+    </section>
   );
 };
 
