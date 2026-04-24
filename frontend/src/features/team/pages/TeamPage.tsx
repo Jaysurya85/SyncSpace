@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import Button from "../../../shared/components/Button";
 import Input from "../../../shared/components/Input";
-import FeaturePageShell from "../../../shared/components/FeaturePageShell";
 import { useAuth } from "../../auth/useAuth";
 import { useWorkspaceShell } from "../../workspaces/workspaceShellContext";
 
@@ -101,11 +100,7 @@ const TeamPage = () => {
   };
 
   return (
-    <FeaturePageShell
-      eyebrow="Team"
-      title={`${currentWorkspace.name} team`}
-      description="Workspace membership now drives collaboration visibility. Everyone listed here should also receive this workspace through the workspace list API."
-    >
+    <section className="space-y-6">
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-6">
           <div className="rounded-[28px] border border-border bg-surface p-6 shadow-sm">
@@ -324,7 +319,7 @@ const TeamPage = () => {
           ) : null}
         </div>
       </section>
-    </FeaturePageShell>
+    </section>
   );
 };
 

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Button from "../../../shared/components/Button";
 import Input from "../../../shared/components/Input";
-import FeaturePageShell from "../../../shared/components/FeaturePageShell";
 import { useWorkspaceShell } from "../../workspaces/workspaceShellContext";
 import {
   createWorkspaceTask,
@@ -378,11 +377,7 @@ const TasksPage = () => {
   };
 
   return (
-    <FeaturePageShell
-      eyebrow="Tasks"
-      title={`${currentWorkspace.name} tasks`}
-      description="Track issue-style work inside this workspace with titles, descriptions, statuses, and assignees. The data is mocked locally for now so the API swap will be isolated to the task service."
-    >
+    <section className="space-y-6">
       <section className="rounded-[28px] border border-border bg-surface p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -788,7 +783,7 @@ const TasksPage = () => {
             </form>
         </TaskModalPortal>
       ) : null}
-    </FeaturePageShell>
+    </section>
   );
 };
 
