@@ -2,7 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
+  margin: 0;
   background:
     radial-gradient(circle at top, rgba(99, 102, 241, 0.08), transparent 30%),
     linear-gradient(180deg, #f8fafc 0%, #f3f7fb 100%);
