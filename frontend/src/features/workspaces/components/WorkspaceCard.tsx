@@ -12,6 +12,7 @@ const WorkspaceCard = ({
   isDeleting = false,
   onDelete,
 }: WorkspaceCardProps) => {
+  const canDelete = onDelete && workspace.role === "owner";
   const workspaceMeta =
     workspace.documentCount !== undefined
       ? `${workspace.documentCount} docs`
@@ -41,7 +42,7 @@ const WorkspaceCard = ({
           >
             Open
           </Link>
-          {onDelete ? (
+          {canDelete ? (
             <button
               type="button"
               onClick={() => onDelete(workspace)}
@@ -57,6 +58,7 @@ const WorkspaceCard = ({
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3 text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
+        {workspace.role ? <span>{workspace.role}</span> : null}
         <span>{workspace.ownerName}</span>
         <span>{workspaceMeta}</span>
         <span>{workspace.updatedAt}</span>
