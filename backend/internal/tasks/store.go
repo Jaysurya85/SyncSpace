@@ -72,7 +72,7 @@ func (s *PostgresStore) CreateTask(
 			created_by,
 			deadline
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1::uuid, $2, $3, $4, $5::uuid, $6::uuid, $7)
 		RETURNING id, workspace_id, title, description, status, priority,
 		          assigned_to, created_by, deadline, created_at, updated_at
 	`
@@ -122,7 +122,7 @@ func (s *PostgresStore) ListTasks(
 		SELECT id, workspace_id, title, description, status, priority,
 		       assigned_to, created_by, deadline, created_at, updated_at
 		FROM tasks
-		WHERE workspace_id = $1
+		WHERE workspace_id::text = $1
 		ORDER BY created_at DESC
 	`
 
@@ -174,7 +174,7 @@ func (s *PostgresStore) ListTasksByAssignee(
 		SELECT id, workspace_id, title, description, status, priority,
 		       assigned_to, created_by, deadline, created_at, updated_at
 		FROM tasks
-		WHERE workspace_id = $1 AND assigned_to = $2
+		WHERE workspace_id::text = $1 AND assigned_to::text = $2
 		ORDER BY created_at DESC
 	`
 
@@ -218,7 +218,7 @@ func (s *PostgresStore) GetTask(
 		SELECT id, workspace_id, title, description, status, priority,
 		       assigned_to, created_by, deadline, created_at, updated_at
 		FROM tasks
-		WHERE id = $1
+		WHERE id::text = $1
 	`
 
 	var task Task
@@ -270,9 +270,9 @@ func (s *PostgresStore) AssignTask(
 
 	const query = `
 		UPDATE tasks
-		SET assigned_to = $2,
+		SET assigned_to = $2::uuid,
 		    updated_at = NOW()
-		WHERE id = $1
+		WHERE id::text = $1
 		RETURNING id, workspace_id, title, description, status, priority,
 		          assigned_to, created_by, deadline, created_at, updated_at
 	`
@@ -328,10 +328,10 @@ func (s *PostgresStore) UpdateTask(
 		    description = $3,
 		    status = $4,
 		    priority = $5,
-		    assigned_to = $6,
+		    assigned_to = $6::uuid,
 		    deadline = $7,
 		    updated_at = NOW()
-		WHERE id = $1
+		WHERE id::text = $1
 		RETURNING id, workspace_id, title, description, status, priority,
 		          assigned_to, created_by, deadline, created_at, updated_at
 	`
@@ -385,7 +385,7 @@ func (s *PostgresStore) DeleteTask(
 		return err
 	}
 
-	tag, err := s.DB.Exec(ctx, `DELETE FROM tasks WHERE id = $1`, taskID)
+	tag, err := s.DB.Exec(ctx, `DELETE FROM tasks WHERE id::text = $1`, taskID)
 	if err != nil {
 		return err
 	}
@@ -399,7 +399,7 @@ func (s *PostgresStore) DeleteTask(
 
 func (s *PostgresStore) getTaskWorkspaceID(ctx context.Context, taskID string) (string, error) {
 	var workspaceID string
-	err := s.DB.QueryRow(ctx, `SELECT workspace_id FROM tasks WHERE id = $1`, taskID).Scan(&workspaceID)
+	err := s.DB.QueryRow(ctx, `SELECT workspace_id FROM tasks WHERE id::text = $1`, taskID).Scan(&workspaceID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrTaskNotFound
 	}
@@ -413,7 +413,7 @@ func (s *PostgresStore) ensureMemberAccess(ctx context.Context, workspaceID, use
 	var isMember bool
 	err := s.DB.QueryRow(
 		ctx,
-		`SELECT EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2)`,
+		`SELECT EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id::text = $1 AND user_id::text = $2)`,
 		workspaceID,
 		userID,
 	).Scan(&isMember)
@@ -427,7 +427,7 @@ func (s *PostgresStore) ensureMemberAccess(ctx context.Context, workspaceID, use
 	var workspaceExists bool
 	err = s.DB.QueryRow(
 		ctx,
-		`SELECT EXISTS (SELECT 1 FROM workspaces WHERE id = $1)`,
+		`SELECT EXISTS (SELECT 1 FROM workspaces WHERE id::text = $1)`,
 		workspaceID,
 	).Scan(&workspaceExists)
 	if err != nil {
@@ -448,7 +448,7 @@ func (s *PostgresStore) ensureAssigneeAccess(ctx context.Context, workspaceID st
 	var isMember bool
 	err := s.DB.QueryRow(
 		ctx,
-		`SELECT EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2)`,
+		`SELECT EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id::text = $1 AND user_id::text = $2)`,
 		workspaceID,
 		*assigneeID,
 	).Scan(&isMember)
