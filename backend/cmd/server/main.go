@@ -96,7 +96,9 @@ func main() {
 
 	mux.Handle("POST /api/workspaces/{workspace_id}/tasks", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.CreateTask)))
 	mux.Handle("GET /api/workspaces/{workspace_id}/tasks", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.ListTasks)))
+	mux.Handle("GET /api/workspaces/{workspace_id}/tasks/assignees/{assignee_id}", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.ListTasksByAssignee)))
 	mux.Handle("GET /api/tasks/{task_id}", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.GetTask)))
+	mux.Handle("PUT /api/tasks/{task_id}/assign", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.AssignTask)))
 	mux.Handle("PUT /api/tasks/{task_id}", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.UpdateTask)))
 	mux.Handle("DELETE /api/tasks/{task_id}", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.DeleteTask)))
 
