@@ -35,6 +35,7 @@ import (
 	"syncspace-backend/internal/middleware"
 	"syncspace-backend/internal/users"
 	"syncspace-backend/internal/workspaces"
+	"syncspace-backend/internal/tasks"
 
 	_ "syncspace-backend/docs"
 
@@ -62,6 +63,7 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(pool)
 	documentHandler := handlers.NewDocumentHandler(documents.NewPostgresStore(pool))
+	taskHandler := handlers.NewTaskHandler(tasks.NewPostgresStore(pool))
 	workspaceHandler := handlers.NewWorkspaceHandler(workspaces.NewPostgresStore(pool))
 	userHandler := users.NewUserHandler(users.NewPostgresStore(pool))
 
@@ -91,6 +93,12 @@ func main() {
 	mux.Handle("GET /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.GetDocument)))
 	mux.Handle("PUT /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.UpdateDocument)))
 	mux.Handle("DELETE /api/documents/{document_id}", middleware.AuthMiddleware(http.HandlerFunc(documentHandler.DeleteDocument)))
+
+	mux.Handle("POST /api/workspaces/{workspace_id}/tasks", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.CreateTask)))
+	mux.Handle("GET /api/workspaces/{workspace_id}/tasks", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.ListTasks)))
+	mux.Handle("GET /api/tasks/{task_id}", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.GetTask)))
+	mux.Handle("PUT /api/tasks/{task_id}", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.UpdateTask)))
+	mux.Handle("DELETE /api/tasks/{task_id}", middleware.AuthMiddleware(http.HandlerFunc(taskHandler.DeleteTask)))
 
 	mux.Handle("GET /api/protected", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := middleware.GetUserFromContext(r.Context())
