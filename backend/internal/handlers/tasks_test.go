@@ -16,11 +16,13 @@ import (
 )
 
 type fakeTaskStore struct {
-	createFn func(ctx context.Context, workspaceID, userID, title, description, priority string, assignedTo *string, deadline *time.Time) (*tasks.Task, error)
-	listFn   func(ctx context.Context, workspaceID, userID string) ([]tasks.Task, error)
-	getFn    func(ctx context.Context, taskID, userID string) (*tasks.Task, error)
-	updateFn func(ctx context.Context, taskID, userID, title, description, status, priority string, assignedTo *string, deadline *time.Time) (*tasks.Task, error)
-	deleteFn func(ctx context.Context, taskID, userID string) error
+	createFn         func(ctx context.Context, workspaceID, userID, title, description, priority string, assignedTo *string, deadline *time.Time) (*tasks.Task, error)
+	listFn           func(ctx context.Context, workspaceID, userID string) ([]tasks.Task, error)
+	listByAssigneeFn func(ctx context.Context, workspaceID, assigneeID, userID string) ([]tasks.Task, error)
+	getFn            func(ctx context.Context, taskID, userID string) (*tasks.Task, error)
+	assignFn         func(ctx context.Context, taskID, userID, assigneeID string) (*tasks.Task, error)
+	updateFn         func(ctx context.Context, taskID, userID, title, description, status, priority string, assignedTo *string, deadline *time.Time) (*tasks.Task, error)
+	deleteFn         func(ctx context.Context, taskID, userID string) error
 }
 
 func (f *fakeTaskStore) CreateTask(ctx context.Context, workspaceID, userID, title, description, priority string, assignedTo *string, deadline *time.Time) (*tasks.Task, error) {
@@ -31,8 +33,16 @@ func (f *fakeTaskStore) ListTasks(ctx context.Context, workspaceID, userID strin
 	return f.listFn(ctx, workspaceID, userID)
 }
 
+func (f *fakeTaskStore) ListTasksByAssignee(ctx context.Context, workspaceID, assigneeID, userID string) ([]tasks.Task, error) {
+	return f.listByAssigneeFn(ctx, workspaceID, assigneeID, userID)
+}
+
 func (f *fakeTaskStore) GetTask(ctx context.Context, taskID, userID string) (*tasks.Task, error) {
 	return f.getFn(ctx, taskID, userID)
+}
+
+func (f *fakeTaskStore) AssignTask(ctx context.Context, taskID, userID, assigneeID string) (*tasks.Task, error) {
+	return f.assignFn(ctx, taskID, userID, assigneeID)
 }
 
 func (f *fakeTaskStore) UpdateTask(ctx context.Context, taskID, userID, title, description, status, priority string, assignedTo *string, deadline *time.Time) (*tasks.Task, error) {
@@ -184,6 +194,61 @@ func TestListTasks(t *testing.T) {
 	}
 }
 
+func TestListTasksByAssignee(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{
+		listByAssigneeFn: func(ctx context.Context, workspaceID, assigneeID, userID string) ([]tasks.Task, error) {
+			if workspaceID != "ws-1" {
+				t.Fatalf("unexpected workspaceID: %s", workspaceID)
+			}
+			if assigneeID != "user-2" {
+				t.Fatalf("unexpected assigneeID: %s", assigneeID)
+			}
+			if userID != "user-1" {
+				t.Fatalf("unexpected userID: %s", userID)
+			}
+			return []tasks.Task{
+				{ID: "task-1", Title: "Task 1", AssignedTo: &assigneeID},
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces/ws-1/tasks/assignees/user-2", nil)
+	req.SetPathValue("workspace_id", "ws-1")
+	req.SetPathValue("assignee_id", "user-2")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.ListTasksByAssignee(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var got []tasks.Task
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if len(got) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(got))
+	}
+}
+
+func TestListTasksByAssigneeRequiresAssignee(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces/ws-1/tasks/assignees/", nil)
+	req.SetPathValue("workspace_id", "ws-1")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.ListTasksByAssignee(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 func TestGetTaskNotFound(t *testing.T) {
 	handler := NewTaskHandler(&fakeTaskStore{
 		getFn: func(ctx context.Context, taskID, userID string) (*tasks.Task, error) {
@@ -222,6 +287,93 @@ func TestGetTask(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestAssignTask(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{
+		assignFn: func(ctx context.Context, taskID, userID, assigneeID string) (*tasks.Task, error) {
+			if taskID != "task-1" {
+				t.Fatalf("unexpected taskID: %s", taskID)
+			}
+			if userID != "user-1" {
+				t.Fatalf("unexpected userID: %s", userID)
+			}
+			if assigneeID != "user-2" {
+				t.Fatalf("unexpected assigneeID: %s", assigneeID)
+			}
+			return &tasks.Task{
+				ID:         taskID,
+				Title:      "Task 1",
+				AssignedTo: &assigneeID,
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/api/tasks/task-1/assign",
+		strings.NewReader(`{"assigned_to":" user-2 "}`),
+	)
+	req.SetPathValue("task_id", "task-1")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.AssignTask(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var got tasks.Task
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if got.AssignedTo == nil || *got.AssignedTo != "user-2" {
+		t.Fatalf("unexpected assignee: %v", got.AssignedTo)
+	}
+}
+
+func TestAssignTaskRequiresAssignee(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/api/tasks/task-1/assign",
+		strings.NewReader(`{"assigned_to":"   "}`),
+	)
+	req.SetPathValue("task_id", "task-1")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.AssignTask(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAssignTaskAssigneeNotFound(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{
+		assignFn: func(ctx context.Context, taskID, userID, assigneeID string) (*tasks.Task, error) {
+			return nil, tasks.ErrAssigneeNotFound
+		},
+	})
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/api/tasks/task-1/assign",
+		strings.NewReader(`{"assigned_to":"user-404"}`),
+	)
+	req.SetPathValue("task_id", "task-1")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.AssignTask(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
 	}
 }
 

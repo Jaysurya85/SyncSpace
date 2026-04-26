@@ -26,6 +26,11 @@ definitions:
       user_id:
         type: string
     type: object
+  handlers.AssignTaskRequest:
+    properties:
+      assigned_to:
+        type: string
+    type: object
   handlers.AuthResponse:
     properties:
       token:
@@ -499,6 +504,56 @@ paths:
       security:
       - BearerAuth: []
       summary: Update task
+      tags:
+      - tasks
+  /api/tasks/{task_id}/assign:
+    put:
+      consumes:
+      - application/json
+      description: Assign a task to a workspace member. Only workspace members can
+        assign tasks.
+      parameters:
+      - description: Task ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: Assignee payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AssignTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tasks.Task'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Assign task
       tags:
       - tasks
   /api/users:
@@ -1218,6 +1273,55 @@ paths:
       security:
       - BearerAuth: []
       summary: Create task
+      tags:
+      - tasks
+  /api/workspaces/{workspace_id}/tasks/assignees/{assignee_id}:
+    get:
+      description: List tasks in a workspace assigned to a specific workspace member.
+        Only workspace members can view tasks.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspace_id
+        required: true
+        type: string
+      - description: Assignee user ID
+        in: path
+        name: assignee_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/tasks.Task'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List tasks by assignee
       tags:
       - tasks
   /health:
