@@ -1,14 +1,17 @@
-export type TaskStatus = "open" | "in_progress" | "closed";
+export type TaskStatus = "todo" | "in_progress" | "done";
+export type TaskPriority = "low" | "medium" | "high";
 
 export interface TaskRecord {
   id: string;
-  number: number;
+  reference: string;
   workspaceId: string;
   title: string;
   description: string;
   status: TaskStatus;
+  priority: TaskPriority;
   assigneeUserId?: string;
-  assigneeName?: string;
+  createdBy: string;
+  deadline?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,7 +20,8 @@ export interface CreateTaskPayload {
   title: string;
   description: string;
   assigneeUserId?: string;
-  assigneeName?: string;
+  priority: TaskPriority;
+  deadline?: string;
 }
 
 export interface UpdateTaskStatusPayload {
@@ -29,5 +33,6 @@ export interface UpdateTaskPayload {
   description: string;
   status: TaskStatus;
   assigneeUserId?: string;
-  assigneeName?: string;
+  priority: TaskPriority;
+  deadline?: string;
 }

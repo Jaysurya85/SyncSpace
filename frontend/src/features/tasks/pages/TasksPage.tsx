@@ -2,32 +2,46 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Button from "../../../shared/components/Button";
 import Input from "../../../shared/components/Input";
+import { useAuth } from "../../auth/useAuth";
 import { useWorkspaceShell } from "../../workspaces/workspaceShellContext";
 import {
   createWorkspaceTask,
+  fetchWorkspaceTasksByAssignee,
   fetchWorkspaceTasks,
   updateTask,
   updateTaskStatus,
 } from "../tasksApi";
-import type { TaskRecord, TaskStatus } from "../taskTypes";
+import type { TaskPriority, TaskRecord, TaskStatus } from "../taskTypes";
 
 const statusOptions: { value: TaskStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "open", label: "Open" },
+  { value: "todo", label: "Todo" },
   { value: "in_progress", label: "In Progress" },
-  { value: "closed", label: "Closed" },
+  { value: "done", label: "Done" },
 ];
 
 const statusLabels: Record<TaskStatus, string> = {
-  open: "Open",
+  todo: "Todo",
   in_progress: "In Progress",
-  closed: "Closed",
+  done: "Done",
 };
 
 const statusClasses: Record<TaskStatus, string> = {
-  open: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  todo: "bg-sky-50 text-sky-700 border-sky-200",
   in_progress: "bg-amber-50 text-amber-700 border-amber-200",
-  closed: "bg-slate-100 text-slate-700 border-slate-200",
+  done: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+const priorityLabels: Record<TaskPriority, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
+const priorityClasses: Record<TaskPriority, string> = {
+  low: "bg-slate-100 text-slate-700 border-slate-200",
+  medium: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  high: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 const boardColumns: {
@@ -36,7 +50,7 @@ const boardColumns: {
   subtitle: string;
 }[] = [
   {
-    status: "open",
+    status: "todo",
     title: "Todo",
     subtitle: "Ready to pick up",
   },
@@ -46,11 +60,63 @@ const boardColumns: {
     subtitle: "Currently moving",
   },
   {
-    status: "closed",
+    status: "done",
     title: "Done",
     subtitle: "Completed work",
   },
 ];
+
+const formatTaskDate = (value?: string) => {
+  if (!value) {
+    return "No date";
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(parsedDate);
+};
+
+const toDateTimeLocalValue = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+  const day = String(parsedDate.getDate()).padStart(2, "0");
+  const hours = String(parsedDate.getHours()).padStart(2, "0");
+  const minutes = String(parsedDate.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const toIsoDateTime = (value: string) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return undefined;
+  }
+
+  return parsedDate.toISOString();
+};
 
 const TaskModalPortal = ({
   children,
@@ -81,24 +147,32 @@ const TaskModalPortal = ({
   );
 };
 
+type TaskScope = "all" | "mine";
+
 const TasksPage = () => {
+  const { user } = useAuth();
   const { currentWorkspace, workspaceMembers } = useWorkspaceShell();
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [taskScope, setTaskScope] = useState<TaskScope>("all");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assigneeUserId, setAssigneeUserId] = useState("");
+  const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [deadline, setDeadline] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editStatus, setEditStatus] = useState<TaskStatus>("open");
+  const [editStatus, setEditStatus] = useState<TaskStatus>("todo");
   const [editAssigneeUserId, setEditAssigneeUserId] = useState("");
+  const [editPriority, setEditPriority] = useState<TaskPriority>("medium");
+  const [editDeadline, setEditDeadline] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
@@ -118,7 +192,23 @@ const TasksPage = () => {
       try {
         setIsLoading(true);
         setLoadError(null);
-        const nextTasks = await fetchWorkspaceTasks(currentWorkspace.id);
+        let nextTasks: TaskRecord[];
+
+        if (taskScope === "mine") {
+          const assignedTasks = await fetchWorkspaceTasksByAssignee(
+            currentWorkspace.id,
+            user.id
+          );
+
+          if (assignedTasks.length > 0) {
+            nextTasks = assignedTasks;
+          } else {
+            const allTasks = await fetchWorkspaceTasks(currentWorkspace.id);
+            nextTasks = allTasks.filter((task) => task.assigneeUserId === user.id);
+          }
+        } else {
+          nextTasks = await fetchWorkspaceTasks(currentWorkspace.id);
+        }
 
         if (isMounted) {
           setTasks(nextTasks);
@@ -143,7 +233,7 @@ const TasksPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [currentWorkspace]);
+  }, [currentWorkspace, taskScope, user.id]);
 
   useEffect(() => {
     if (!isModalOpen) {
@@ -206,13 +296,20 @@ const TasksPage = () => {
         title: trimmedTitle,
         description: trimmedDescription,
         assigneeUserId: selectedAssignee?.userId,
-        assigneeName: selectedAssignee?.name,
+        priority,
+        deadline: toIsoDateTime(deadline),
       });
 
-      setTasks((currentTasks) => [createdTask, ...currentTasks]);
+      setTasks((currentTasks) =>
+        taskScope === "mine" && createdTask.assigneeUserId !== user.id
+          ? currentTasks
+          : [createdTask, ...currentTasks]
+      );
       setTitle("");
       setDescription("");
       setAssigneeUserId("");
+      setPriority("medium");
+      setDeadline("");
       setIsCreateOpen(false);
     } catch (error) {
       setFormError(
@@ -314,6 +411,8 @@ const TasksPage = () => {
     setEditDescription(task.description);
     setEditStatus(task.status);
     setEditAssigneeUserId(task.assigneeUserId ?? "");
+    setEditPriority(task.priority);
+    setEditDeadline(toDateTimeLocalValue(task.deadline));
     setEditError(null);
   };
 
@@ -321,8 +420,10 @@ const TasksPage = () => {
     setEditingTask(null);
     setEditTitle("");
     setEditDescription("");
-    setEditStatus("open");
+    setEditStatus("todo");
     setEditAssigneeUserId("");
+    setEditPriority("medium");
+    setEditDeadline("");
     setEditError(null);
   };
 
@@ -358,11 +459,16 @@ const TasksPage = () => {
         description: trimmedDescription,
         status: editStatus,
         assigneeUserId: selectedAssignee?.userId,
-        assigneeName: selectedAssignee?.name,
+        priority: editPriority,
+        deadline: toIsoDateTime(editDeadline),
       });
 
       setTasks((currentTasks) =>
-        currentTasks.map((task) => (task.id === editingTask.id ? updatedTask : task))
+        taskScope === "mine" && updatedTask.assigneeUserId !== user.id
+          ? currentTasks.filter((task) => task.id !== editingTask.id)
+          : currentTasks.map((task) =>
+              task.id === editingTask.id ? updatedTask : task
+            )
       );
       closeEditModal();
     } catch (error) {
@@ -389,7 +495,7 @@ const TasksPage = () => {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
               Organize workspace issues by status. Open a card to edit details,
-              change owners, or move work through the board.
+              change priority, owners, deadlines, or move work through the board.
             </p>
           </div>
 
@@ -407,6 +513,26 @@ const TasksPage = () => {
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <div className="rounded-full bg-background px-4 py-2 text-sm text-text-secondary">
             {tasks.length} total task{tasks.length === 1 ? "" : "s"}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { value: "all", label: "All tasks" },
+              { value: "mine", label: "Assigned to me" },
+            ] as { value: TaskScope; label: string }[]).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setTaskScope(option.value)}
+                className={[
+                  "rounded-full px-4 py-2 text-sm font-semibold transition",
+                  taskScope === option.value
+                    ? "bg-primary text-white"
+                    : "border border-border bg-background text-text-secondary hover:border-primary/20 hover:bg-primary-light/40 hover:text-text-primary",
+                ].join(" ")}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
           <div className="rounded-full bg-background px-4 py-2 text-sm text-text-secondary">
             {workspaceMembers.length} assignee
@@ -528,7 +654,7 @@ const TasksPage = () => {
                                 {task.title}
                               </h4>
                               <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-text-muted">
-                                Issue #{task.number}
+                                Issue {task.reference}
                               </p>
                             </div>
 
@@ -547,11 +673,26 @@ const TasksPage = () => {
                           </p>
 
                           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-text-secondary">
-                            <span className="rounded-full bg-background px-3 py-1.5">
-                              {task.assigneeName ?? "Unassigned"}
+                            <span
+                              className={[
+                                "rounded-full border px-3 py-1.5",
+                                priorityClasses[task.priority],
+                              ].join(" ")}
+                            >
+                              {priorityLabels[task.priority]}
                             </span>
                             <span className="rounded-full bg-background px-3 py-1.5">
-                              Updated {task.updatedAt}
+                              {workspaceMembers.find(
+                                (member) => member.userId === task.assigneeUserId
+                              )?.name ?? "Unassigned"}
+                            </span>
+                            {task.deadline ? (
+                              <span className="rounded-full bg-background px-3 py-1.5">
+                                Due {formatTaskDate(task.deadline)}
+                              </span>
+                            ) : null}
+                            <span className="rounded-full bg-background px-3 py-1.5">
+                              Updated {formatTaskDate(task.updatedAt)}
                             </span>
                           </div>
                         </button>
@@ -571,9 +712,9 @@ const TasksPage = () => {
                             disabled={updatingTaskId === task.id}
                             className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            <option value="open">Todo</option>
+                            <option value="todo">Todo</option>
                             <option value="in_progress">In Progress</option>
-                            <option value="closed">Done</option>
+                            <option value="done">Done</option>
                           </select>
                         </div>
                       </article>
@@ -655,13 +796,44 @@ const TasksPage = () => {
                 </select>
               </div>
 
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">
+                    Priority
+                  </label>
+                  <select
+                    value={priority}
+                    onChange={(event) =>
+                      setPriority(event.target.value as TaskPriority)
+                    }
+                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">
+                    Deadline
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={deadline}
+                    onChange={(event) => setDeadline(event.target.value)}
+                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
               {formError && !formError.toLowerCase().includes("title") ? (
                 <p className="text-sm text-red-600">{formError}</p>
               ) : null}
 
               <div className="flex items-center justify-between gap-3 border-t border-border pt-5">
                 <p className="text-xs uppercase tracking-[0.16em] text-text-muted">
-                  Mock workspace data
+                  Backend task API
                 </p>
                 <div className="flex items-center gap-3">
                   <Button
@@ -691,7 +863,7 @@ const TasksPage = () => {
                   Edit task
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-text-primary">
-                  Update issue #{editingTask.number}
+                  Update issue {editingTask.reference}
                 </h2>
               </div>
 
@@ -734,9 +906,9 @@ const TasksPage = () => {
                     onChange={(event) => setEditStatus(event.target.value as TaskStatus)}
                     className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="open">Open</option>
+                    <option value="todo">Todo</option>
                     <option value="in_progress">In Progress</option>
-                    <option value="closed">Closed</option>
+                    <option value="done">Done</option>
                   </select>
                 </div>
 
@@ -759,13 +931,44 @@ const TasksPage = () => {
                 </div>
               </div>
 
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">
+                    Priority
+                  </label>
+                  <select
+                    value={editPriority}
+                    onChange={(event) =>
+                      setEditPriority(event.target.value as TaskPriority)
+                    }
+                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">
+                    Deadline
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={editDeadline}
+                    onChange={(event) => setEditDeadline(event.target.value)}
+                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
               {editError && !editError.toLowerCase().includes("title") ? (
                 <p className="text-sm text-red-600">{editError}</p>
               ) : null}
 
               <div className="flex items-center justify-between gap-3 border-t border-border pt-5">
                 <p className="text-xs uppercase tracking-[0.16em] text-text-muted">
-                  Mock workspace data
+                  Backend task API
                 </p>
                 <div className="flex items-center gap-3">
                   <Button

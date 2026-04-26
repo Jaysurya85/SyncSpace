@@ -1,112 +1,154 @@
+import axios from "axios";
+import { api } from "../../services/api";
 import type {
   CreateTaskPayload,
+  TaskPriority,
   TaskRecord,
   TaskStatus,
   UpdateTaskPayload,
   UpdateTaskStatusPayload,
 } from "./taskTypes";
 
-const TASKS_STORAGE_KEY = "syncspace-tasks";
+interface TaskApiRecord {
+  id?: string | number;
+  workspace_id?: string | number | null;
+  workspaceId?: string | number | null;
+  title?: string | null;
+  description?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  assigned_to?: string | null;
+  assignedTo?: string | null;
+  created_by?: string | null;
+  createdBy?: string | null;
+  deadline?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+  updated_at?: string | null;
+  updatedAt?: string | null;
+}
 
-const toDisplayDate = (value?: string | null) => {
-  if (!value) {
-    return "Recently updated";
+const getErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (
+    axios.isAxiosError(error) &&
+    typeof error.response?.data?.error === "string"
+  ) {
+    return error.response.data.error;
   }
 
-  const parsedDate = new Date(value);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(parsedDate);
+  return fallbackMessage;
 };
 
-const readTasks = (): TaskRecord[] => {
-  const storedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
-
-  if (!storedTasks) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(storedTasks) as TaskRecord[];
-  } catch {
-    localStorage.removeItem(TASKS_STORAGE_KEY);
-    return [];
+const normalizeStatus = (status?: string | null): TaskStatus => {
+  switch (status) {
+    case "in_progress":
+      return "in_progress";
+    case "done":
+      return "done";
+    case "todo":
+    default:
+      return "todo";
   }
 };
 
-const writeTasks = (tasks: TaskRecord[]) => {
-  localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-};
-
-const formatTask = (task: TaskRecord): TaskRecord => ({
-  ...task,
-  createdAt: toDisplayDate(task.createdAt),
-  updatedAt: toDisplayDate(task.updatedAt),
-});
-
-const createSeedTasks = (workspaceId: string): TaskRecord[] => {
-  const timestamp = new Date().toISOString();
-
-  return [
-    {
-      id: `${workspaceId}-task-1`,
-      number: 1,
-      workspaceId,
-      title: "Set up workspace task workflow",
-      description:
-        "Create the first issue-style task flow for this workspace so the team can track work before the backend task APIs are available.",
-      status: "open",
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    },
-    {
-      id: `${workspaceId}-task-2`,
-      number: 2,
-      workspaceId,
-      title: "Review initial priorities",
-      description:
-        "Capture the first high-priority tasks that should move into active work this week.",
-      status: "in_progress",
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    },
-  ];
-};
-
-const ensureWorkspaceSeedTasks = (workspaceId: string) => {
-  const tasks = readTasks();
-  const workspaceTasks = tasks.filter((task) => task.workspaceId === workspaceId);
-
-  if (workspaceTasks.length > 0) {
-    return tasks;
+const normalizePriority = (priority?: string | null): TaskPriority => {
+  switch (priority) {
+    case "low":
+      return "low";
+    case "high":
+      return "high";
+    case "medium":
+    default:
+      return "medium";
   }
-
-  const seededTasks = [...tasks, ...createSeedTasks(workspaceId)];
-  writeTasks(seededTasks);
-  return seededTasks;
 };
 
-const getNextTaskNumber = (tasks: TaskRecord[], workspaceId: string) =>
-  tasks
-    .filter((task) => task.workspaceId === workspaceId)
-    .reduce((maxNumber, task) => Math.max(maxNumber, task.number), 0) + 1;
+const createTaskReference = (taskId: string) =>
+  taskId.length > 8 ? taskId.slice(0, 8).toUpperCase() : taskId.toUpperCase();
+
+const normalizeTask = (task: TaskApiRecord): TaskRecord => {
+  const id = String(task.id ?? "");
+
+  return {
+    id,
+    reference: createTaskReference(id),
+    workspaceId: String(task.workspace_id ?? task.workspaceId ?? ""),
+    title: task.title ?? "Untitled task",
+    description: task.description ?? "",
+    status: normalizeStatus(task.status),
+    priority: normalizePriority(task.priority),
+    assigneeUserId: task.assigned_to ?? task.assignedTo ?? undefined,
+    createdBy: String(task.created_by ?? task.createdBy ?? ""),
+    deadline: task.deadline ?? undefined,
+    createdAt: task.created_at ?? task.createdAt ?? "",
+    updatedAt: task.updated_at ?? task.updatedAt ?? "",
+  };
+};
 
 export const fetchWorkspaceTasks = async (
   workspaceId: string
 ): Promise<TaskRecord[]> => {
-  const tasks = ensureWorkspaceSeedTasks(workspaceId);
+  try {
+    const response = await api.get<TaskApiRecord[]>(`/workspaces/${workspaceId}/tasks`);
 
-  return tasks
-    .filter((task) => task.workspaceId === workspaceId)
-    .sort((leftTask, rightTask) => rightTask.number - leftTask.number)
-    .map(formatTask);
+    if (!Array.isArray(response.data)) {
+      return [];
+    }
+
+    return response.data
+      .map(normalizeTask)
+      .filter((task) => task.id)
+      .sort((leftTask, rightTask) =>
+        rightTask.updatedAt.localeCompare(leftTask.updatedAt)
+      );
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 404 || error.response?.status === 204)
+    ) {
+      return [];
+    }
+
+    throw new Error(
+      getErrorMessage(error, "Failed to load tasks. Please try again.")
+    );
+  }
+};
+
+export const fetchWorkspaceTasksByAssignee = async (
+  workspaceId: string,
+  assigneeId: string
+): Promise<TaskRecord[]> => {
+  try {
+    const response = await api.get<TaskApiRecord[]>(
+      `/workspaces/${workspaceId}/tasks/assignees/${assigneeId}`
+    );
+
+    if (!Array.isArray(response.data)) {
+      return [];
+    }
+
+    return response.data
+      .map(normalizeTask)
+      .filter((task) => task.id)
+      .sort((leftTask, rightTask) =>
+        rightTask.updatedAt.localeCompare(leftTask.updatedAt)
+      );
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 404 || error.response?.status === 204)
+    ) {
+      return [];
+    }
+
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Failed to load assigned tasks. Please try again."
+      )
+    );
+  }
 };
 
 export const createWorkspaceTask = async (
@@ -124,52 +166,55 @@ export const createWorkspaceTask = async (
     throw new Error("Task description is required.");
   }
 
-  const tasks = ensureWorkspaceSeedTasks(workspaceId);
-  const timestamp = new Date().toISOString();
-  const nextTaskNumber = getNextTaskNumber(tasks, workspaceId);
-  const task: TaskRecord = {
-    id: `${workspaceId}-task-${nextTaskNumber}-${Date.now()}`,
-    number: nextTaskNumber,
-    workspaceId,
-    title,
-    description,
-    status: "open",
-    assigneeUserId: payload.assigneeUserId,
-    assigneeName: payload.assigneeName,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
+  try {
+    const response = await api.post<TaskApiRecord>(`/workspaces/${workspaceId}/tasks`, {
+      title,
+      description,
+      priority: payload.priority,
+      ...(payload.assigneeUserId ? { assigned_to: payload.assigneeUserId } : {}),
+      ...(payload.deadline ? { deadline: payload.deadline } : {}),
+    });
 
-  writeTasks([...tasks, task]);
-
-  return formatTask(task);
+    return normalizeTask(response.data);
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to create task. Please try again.")
+    );
+  }
 };
 
 export const updateTaskStatus = async (
   taskId: string,
   payload: UpdateTaskStatusPayload
 ): Promise<TaskRecord> => {
-  const tasks = readTasks();
-  const task = tasks.find((currentTask) => currentTask.id === taskId);
+  try {
+    const existingTask = await fetchTaskById(taskId);
 
-  if (!task) {
-    throw new Error("Task not found.");
+    if (!existingTask) {
+      throw new Error("Task not found.");
+    }
+
+    const response = await api.put<TaskApiRecord>(`/tasks/${taskId}`, {
+      title: existingTask.title,
+      description: existingTask.description,
+      status: payload.status,
+      priority: existingTask.priority,
+      ...(existingTask.assigneeUserId
+        ? { assigned_to: existingTask.assigneeUserId }
+        : {}),
+      ...(existingTask.deadline ? { deadline: existingTask.deadline } : {}),
+    });
+
+    return normalizeTask(response.data);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Task not found.") {
+      throw error;
+    }
+
+    throw new Error(
+      getErrorMessage(error, "Failed to update task status. Please try again.")
+    );
   }
-
-  const nextStatus: TaskStatus = payload.status;
-  const updatedTask: TaskRecord = {
-    ...task,
-    status: nextStatus,
-    updatedAt: new Date().toISOString(),
-  };
-
-  writeTasks(
-    tasks.map((currentTask) =>
-      currentTask.id === taskId ? updatedTask : currentTask
-    )
-  );
-
-  return formatTask(updatedTask);
 };
 
 export const updateTask = async (
@@ -187,28 +232,37 @@ export const updateTask = async (
     throw new Error("Task description is required.");
   }
 
-  const tasks = readTasks();
-  const task = tasks.find((currentTask) => currentTask.id === taskId);
+  try {
+    const response = await api.put<TaskApiRecord>(`/tasks/${taskId}`, {
+      title,
+      description,
+      status: payload.status,
+      priority: payload.priority,
+      ...(payload.assigneeUserId ? { assigned_to: payload.assigneeUserId } : {}),
+      ...(payload.deadline ? { deadline: payload.deadline } : {}),
+    });
 
-  if (!task) {
-    throw new Error("Task not found.");
+    return normalizeTask(response.data);
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Failed to update task. Please try again.")
+    );
   }
+};
 
-  const updatedTask: TaskRecord = {
-    ...task,
-    title,
-    description,
-    status: payload.status,
-    assigneeUserId: payload.assigneeUserId,
-    assigneeName: payload.assigneeName,
-    updatedAt: new Date().toISOString(),
-  };
+export const fetchTaskById = async (taskId: string): Promise<TaskRecord | null> => {
+  try {
+    const response = await api.get<TaskApiRecord>(`/tasks/${taskId}`);
+    const task = normalizeTask(response.data);
 
-  writeTasks(
-    tasks.map((currentTask) =>
-      currentTask.id === taskId ? updatedTask : currentTask
-    )
-  );
+    return task.id ? task : null;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
 
-  return formatTask(updatedTask);
+    throw new Error(
+      getErrorMessage(error, "Failed to load task. Please try again.")
+    );
+  }
 };
