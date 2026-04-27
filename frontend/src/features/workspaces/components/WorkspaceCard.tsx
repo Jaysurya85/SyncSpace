@@ -47,7 +47,7 @@ const WorkspaceCard = ({
               type="button"
               onClick={() => onDelete(workspace)}
               disabled={isDeleting}
-              className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full border border-danger-border bg-danger-light px-3 py-1 text-xs font-semibold text-danger transition hover:bg-danger-hover disabled:cursor-not-allowed disabled:opacity-60"
               aria-label={`Delete ${workspace.name}`}
               title={`Delete ${workspace.name}`}
             >

@@ -7,17 +7,23 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#6366F1",
-          hover: "#4F46E5",
-          light: "#EEF2FF",
+          DEFAULT: "rgb(var(--color-primary) / <alpha-value>)",
+          hover: "rgb(var(--color-primary-hover) / <alpha-value>)",
+          light: "rgb(var(--color-primary-light) / <alpha-value>)",
         },
-        background: "#F8FAFC",
-        surface: "#FFFFFF",
-        border: "#E2E8F0",
+        danger: {
+          DEFAULT: "rgb(var(--color-danger) / <alpha-value>)",
+          light: "rgb(var(--color-danger-light) / <alpha-value>)",
+          border: "rgb(var(--color-danger-border) / <alpha-value>)",
+          hover: "rgb(var(--color-danger-hover) / <alpha-value>)",
+        },
+        background: "rgb(var(--color-background) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        border: "rgb(var(--color-border) / <alpha-value>)",
         text: {
-          primary: "#0F172A",
-          secondary: "#64748B",
-          muted: "#94A3B8",
+          primary: "rgb(var(--color-text-primary) / <alpha-value>)",
+          secondary: "rgb(var(--color-text-secondary) / <alpha-value>)",
+          muted: "rgb(var(--color-text-muted) / <alpha-value>)",
         },
       },
     },

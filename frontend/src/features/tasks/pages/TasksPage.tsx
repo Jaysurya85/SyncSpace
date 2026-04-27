@@ -39,7 +39,7 @@ const priorityLabels: Record<TaskPriority, string> = {
 };
 
 const priorityClasses: Record<TaskPriority, string> = {
-  low: "bg-slate-100 text-slate-700 border-slate-200",
+  low: "bg-background text-text-secondary border-border",
   medium: "bg-indigo-50 text-indigo-700 border-indigo-200",
   high: "bg-rose-50 text-rose-700 border-rose-200",
 };
@@ -558,8 +558,8 @@ const TasksPage = () => {
         </div>
 
         {loadError ? (
-          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
-            <p className="text-sm font-medium text-red-700">{loadError}</p>
+          <div className="mt-5 rounded-2xl border border-danger-border bg-danger-light p-4">
+            <p className="text-sm font-medium text-danger">{loadError}</p>
           </div>
         ) : null}
 
@@ -710,7 +710,7 @@ const TasksPage = () => {
                               )
                             }
                             disabled={updatingTaskId === task.id}
-                            className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                            className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <option value="todo">Todo</option>
                             <option value="in_progress">In Progress</option>
@@ -773,7 +773,7 @@ const TasksPage = () => {
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   rows={6}
-                  className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Describe the task, expected behavior, acceptance notes, or rollout details."
                 />
               </div>
@@ -785,7 +785,7 @@ const TasksPage = () => {
                 <select
                   value={assigneeUserId}
                   onChange={(event) => setAssigneeUserId(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Unassigned</option>
                   {workspaceMembers.map((member) => (
@@ -806,7 +806,7 @@ const TasksPage = () => {
                     onChange={(event) =>
                       setPriority(event.target.value as TaskPriority)
                     }
-                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -822,13 +822,13 @@ const TasksPage = () => {
                     type="datetime-local"
                     value={deadline}
                     onChange={(event) => setDeadline(event.target.value)}
-                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
 
               {formError && !formError.toLowerCase().includes("title") ? (
-                <p className="text-sm text-red-600">{formError}</p>
+                <p className="text-sm text-danger">{formError}</p>
               ) : null}
 
               <div className="flex items-center justify-between gap-3 border-t border-border pt-5">
@@ -892,7 +892,7 @@ const TasksPage = () => {
                   value={editDescription}
                   onChange={(event) => setEditDescription(event.target.value)}
                   rows={6}
-                  className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
@@ -904,7 +904,7 @@ const TasksPage = () => {
                   <select
                     value={editStatus}
                     onChange={(event) => setEditStatus(event.target.value as TaskStatus)}
-                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="todo">Todo</option>
                     <option value="in_progress">In Progress</option>
@@ -919,7 +919,7 @@ const TasksPage = () => {
                   <select
                     value={editAssigneeUserId}
                     onChange={(event) => setEditAssigneeUserId(event.target.value)}
-                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Unassigned</option>
                     {workspaceMembers.map((member) => (
@@ -941,7 +941,7 @@ const TasksPage = () => {
                     onChange={(event) =>
                       setEditPriority(event.target.value as TaskPriority)
                     }
-                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -957,13 +957,13 @@ const TasksPage = () => {
                     type="datetime-local"
                     value={editDeadline}
                     onChange={(event) => setEditDeadline(event.target.value)}
-                    className="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-text-primary transition focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
 
               {editError && !editError.toLowerCase().includes("title") ? (
-                <p className="text-sm text-red-600">{editError}</p>
+                <p className="text-sm text-danger">{editError}</p>
               ) : null}
 
               <div className="flex items-center justify-between gap-3 border-t border-border pt-5">

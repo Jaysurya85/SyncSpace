@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../features/auth/useAuth";
 import { isGoogleAuthEnabled } from "../../features/auth/authConfig";
+import { useTheme } from "../../features/theme/themeContext";
 
 interface AuthenticatedUserPanelProps {
   showLogout?: boolean;
@@ -13,6 +14,7 @@ const AuthenticatedUserPanel = ({
 }: AuthenticatedUserPanelProps) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -28,6 +30,18 @@ const AuthenticatedUserPanel = ({
         compact ? "justify-end" : "justify-between",
       ].join(" ")}
     >
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-surface text-lg transition hover:border-primary/30 hover:bg-primary-light"
+        aria-label={
+          theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+        }
+        title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      >
+        <span aria-hidden="true">{theme === "dark" ? "☀️" : "🌙"}</span>
+      </button>
+
       <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-background px-3 py-2">
         {user.avatar ? (
           <img

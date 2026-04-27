@@ -97,7 +97,7 @@ const WorkspaceCreateAction = () => {
               />
 
               {createError && !createError.includes("name") ? (
-                <p className="text-sm text-red-600">{createError}</p>
+                <p className="text-sm text-danger">{createError}</p>
               ) : null}
 
               <div className="flex items-center justify-end gap-3 pt-2">

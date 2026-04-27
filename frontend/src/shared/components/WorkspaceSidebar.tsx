@@ -51,8 +51,8 @@ const WorkspaceSidebar = () => {
                       className={[
                         "flex h-10 w-10 items-center justify-center rounded-xl text-xs font-semibold uppercase tracking-[0.16em]",
                         isActive
-                          ? "bg-white text-primary"
-                          : "bg-background text-text-muted group-hover:bg-white group-hover:text-text-primary",
+                          ? "bg-surface text-primary"
+                          : "bg-background text-text-muted group-hover:bg-surface group-hover:text-text-primary",
                       ].join(" ")}
                     >
                       {item.shortLabel}

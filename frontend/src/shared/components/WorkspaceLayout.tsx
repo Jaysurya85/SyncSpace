@@ -36,8 +36,8 @@ const WorkspaceLayoutShell = () => {
   if (error || !currentWorkspace) {
     return (
       <div className="min-h-screen bg-background p-6">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
-          <p className="text-sm font-medium text-red-700">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-danger-border bg-danger-light p-6 shadow-sm">
+          <p className="text-sm font-medium text-danger">
             {error ?? "Workspace not found."}
           </p>
         </div>
@@ -130,7 +130,7 @@ const WorkspaceLayoutShell = () => {
                 </div>
               )}
               {renameError ? (
-                <p className="mt-2 text-sm text-red-600">{renameError}</p>
+                <p className="mt-2 text-sm text-danger">{renameError}</p>
               ) : null}
             </div>
 

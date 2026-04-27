@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
   <meta charset="UTF-8" />
@@ -9,6 +9,13 @@
 
 <body>
   <div id="root"></div>
+  <script>
+    const syncspaceTheme = localStorage.getItem("syncspace-theme");
+    document.documentElement.dataset.theme =
+      syncspaceTheme === "light" || syncspaceTheme === "dark"
+        ? syncspaceTheme
+        : "dark";
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

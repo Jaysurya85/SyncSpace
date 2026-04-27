@@ -163,8 +163,8 @@ const DocumentDetailsPage = () => {
         title="Document unavailable"
         description="The editor could not be opened for this workspace document."
       >
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
-          <p className="text-sm font-medium text-red-700">
+        <div className="rounded-3xl border border-danger-border bg-danger-light p-6 shadow-sm">
+          <p className="text-sm font-medium text-danger">
             {loadError ?? "Document not found."}
           </p>
         </div>
@@ -218,7 +218,7 @@ const DocumentDetailsPage = () => {
                   type="button"
                   onClick={handleDelete}
                   disabled={isDeleting || isSaving}
-                  className="rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full border border-danger-border bg-danger-light px-4 py-2.5 text-sm font-semibold text-danger transition hover:bg-danger-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isDeleting ? "Deleting..." : "🗑️ Delete"}
                 </button>
@@ -258,7 +258,7 @@ const DocumentDetailsPage = () => {
           </div>
 
           {saveError ? (
-            <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
+            <p className="mt-4 rounded-2xl bg-danger-light px-4 py-3 text-sm text-danger">
               {saveError}
             </p>
           ) : null}

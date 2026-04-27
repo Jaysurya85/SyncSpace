@@ -2,6 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+  --color-primary: 99 102 241;
+  --color-primary-hover: 79 70 229;
+  --color-primary-light: 238 242 255;
+  --color-danger: 185 28 28;
+  --color-danger-light: 254 242 242;
+  --color-danger-border: 254 202 202;
+  --color-danger-hover: 254 226 226;
+  --color-background: 248 250 252;
+  --color-surface: 255 255 255;
+  --color-border: 226 232 240;
+  --color-text-primary: 15 23 42;
+  --color-text-secondary: 100 116 139;
+  --color-text-muted: 148 163 184;
+  --page-gradient-start: #f8fafc;
+  --page-gradient-end: #f3f7fb;
+  --page-accent-glow: rgba(99, 102, 241, 0.08);
+  --editor-code-bg: #eef2ff;
+  --editor-code-text: #4f46e5;
+  --editor-pre-bg: #0f172a;
+  --editor-pre-text: #e2e8f0;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-primary: 129 140 248;
+  --color-primary-hover: 165 180 252;
+  --color-primary-light: 38 42 75;
+  --color-danger: 252 165 165;
+  --color-danger-light: 69 26 38;
+  --color-danger-border: 128 47 66;
+  --color-danger-hover: 91 33 50;
+  --color-background: 8 11 22;
+  --color-surface: 17 21 37;
+  --color-border: 44 51 77;
+  --color-text-primary: 235 240 255;
+  --color-text-secondary: 166 176 203;
+  --color-text-muted: 107 119 153;
+  --page-gradient-start: #080b16;
+  --page-gradient-end: #111525;
+  --page-accent-glow: rgba(129, 140, 248, 0.16);
+  --editor-code-bg: #252a4a;
+  --editor-code-text: #c7d2fe;
+  --editor-pre-bg: #050712;
+  --editor-pre-text: #dbe4ff;
+}
+
 html,
 body,
 #root {
@@ -11,8 +59,8 @@ body,
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top, rgba(99, 102, 241, 0.08), transparent 30%),
-    linear-gradient(180deg, #f8fafc 0%, #f3f7fb 100%);
+    radial-gradient(circle at top, var(--page-accent-glow), transparent 30%),
+    linear-gradient(180deg, var(--page-gradient-start) 0%, var(--page-gradient-end) 100%);
   @apply bg-background text-text-primary antialiased;
 }
 
@@ -27,7 +75,7 @@ body {
 
 .notion-editor-shell .tiptap-editor {
   font-family: Georgia, "Times New Roman", serif;
-  caret-color: #6366f1;
+  caret-color: rgb(var(--color-primary));
 }
 
 .notion-editor-shell .tiptap-editor > * + * {
@@ -55,7 +103,7 @@ body {
 }
 
 .notion-editor-shell .tiptap-editor p {
-  color: #0f172a;
+  color: rgb(var(--color-text-primary));
 }
 
 .notion-editor-shell .tiptap-editor ul,
@@ -73,7 +121,7 @@ body {
 
 .notion-editor-shell .tiptap-editor ul li::marker,
 .notion-editor-shell .tiptap-editor ol li::marker {
-  color: #0f172a;
+  color: rgb(var(--color-text-primary));
 }
 
 .notion-editor-shell .tiptap-editor li + li {
@@ -81,7 +129,7 @@ body {
 }
 
 .notion-editor-shell .tiptap-editor a {
-  color: #6366f1;
+  color: rgb(var(--color-primary));
   text-decoration: underline;
   text-underline-offset: 0.14em;
 }
@@ -89,8 +137,8 @@ body {
 .notion-editor-shell .tiptap-editor code {
   padding: 0.12rem 0.35rem;
   border-radius: 0.45rem;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: var(--editor-code-bg);
+  color: var(--editor-code-text);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 0.9em;
 }
@@ -99,8 +147,8 @@ body {
   overflow-x: auto;
   padding: 1rem 1.1rem;
   border-radius: 1rem;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--editor-pre-bg);
+  color: var(--editor-pre-text);
 }
 
 .notion-editor-shell .tiptap-editor pre code {
@@ -113,7 +161,7 @@ body {
   content: attr(data-placeholder);
   float: left;
   height: 0;
-  color: #94a3b8;
+  color: rgb(var(--color-text-muted));
   pointer-events: none;
 }
 

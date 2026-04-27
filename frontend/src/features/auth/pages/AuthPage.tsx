@@ -75,7 +75,7 @@ const AuthPage = () => {
           )}
 
           {authError && (
-            <p className="text-sm text-center text-red-600">
+            <p className="text-center text-sm text-danger">
               {authError}
             </p>
           )}
