@@ -133,7 +133,7 @@ const HomePage = () => {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <div className="rounded-2xl border border-white/70 bg-white/80 p-4 backdrop-blur">
+                <div className="rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
                     Available workspaces
                   </p>
@@ -145,7 +145,7 @@ const HomePage = () => {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/70 bg-white/80 p-4 backdrop-blur">
+                <div className="rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
                     Next step
                   </p>
@@ -187,8 +187,8 @@ const HomePage = () => {
             ) : null}
 
             {!isLoading && loadError ? (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
-                <p className="text-sm font-medium text-red-700">{loadError}</p>
+              <div className="mt-6 rounded-2xl border border-danger-border bg-danger-light p-6">
+                <p className="text-sm font-medium text-danger">{loadError}</p>
               </div>
             ) : null}
 
@@ -217,8 +217,8 @@ const HomePage = () => {
             ) : null}
 
             {!isLoading && !loadError && deleteError ? (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
-                <p className="text-sm font-medium text-red-700">{deleteError}</p>
+              <div className="mt-6 rounded-2xl border border-danger-border bg-danger-light p-6">
+                <p className="text-sm font-medium text-danger">{deleteError}</p>
               </div>
             ) : null}
 
@@ -267,7 +267,7 @@ const HomePage = () => {
           </div>
 
           {createError && !createError.includes("name") ? (
-            <p className="mt-4 text-sm text-red-600">{createError}</p>
+            <p className="mt-4 text-sm text-danger">{createError}</p>
           ) : null}
 
           <div className="mt-6 flex items-center justify-between gap-3">

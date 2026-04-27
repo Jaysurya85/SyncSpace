@@ -206,7 +206,7 @@ const TeamPage = () => {
             {submitError &&
             !submitError.toLowerCase().includes("email") &&
             !submitError.toLowerCase().includes("user") ? (
-              <p className="mt-4 text-sm text-red-600">{submitError}</p>
+              <p className="mt-4 text-sm text-danger">{submitError}</p>
             ) : null}
 
             <div className="mt-6 flex items-center justify-between gap-3">
@@ -237,8 +237,8 @@ const TeamPage = () => {
           </div>
 
           {membersError ? (
-            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
-              <p className="text-sm font-medium text-red-700">{membersError}</p>
+            <div className="mt-5 rounded-2xl border border-danger-border bg-danger-light p-4">
+              <p className="text-sm font-medium text-danger">{membersError}</p>
             </div>
           ) : null}
 
@@ -302,7 +302,7 @@ const TeamPage = () => {
                           variant="secondary"
                           loading={removingUserId === member.userId}
                           onClick={() => handleRemoveMember(member.userId)}
-                          className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                          className="border-danger-border bg-danger-light text-danger hover:bg-danger-hover"
                         >
                           Remove
                         </Button>

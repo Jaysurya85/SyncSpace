@@ -188,8 +188,8 @@ const WorkspaceHomePage = () => {
 
         <div className="mt-5 grid gap-4">
           {deleteError ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-              <p className="text-sm font-medium text-red-700">{deleteError}</p>
+            <div className="rounded-2xl border border-danger-border bg-danger-light p-4">
+              <p className="text-sm font-medium text-danger">{deleteError}</p>
             </div>
           ) : null}
 
@@ -234,7 +234,7 @@ const WorkspaceHomePage = () => {
                       type="button"
                       onClick={() => handleDeleteDocument(document)}
                       disabled={deletingDocumentId === document.id}
-                      className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-full border border-danger-border bg-danger-light px-3 py-2 text-sm font-semibold text-danger transition hover:bg-danger-hover disabled:cursor-not-allowed disabled:opacity-60"
                       aria-label={`Delete ${document.title}`}
                       title={`Delete ${document.title}`}
                     >

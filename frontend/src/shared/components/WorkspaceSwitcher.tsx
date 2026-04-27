@@ -84,7 +84,7 @@ const WorkspaceSwitcher = () => {
               {currentWorkspaceSubtitle}
             </p>
           </div>
-          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+          <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
             {isOpen ? "Close" : "Switch"}
           </span>
         </div>

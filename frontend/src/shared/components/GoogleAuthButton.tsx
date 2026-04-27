@@ -84,7 +84,7 @@ const GoogleAuthButton = ({ onSuccess }: GoogleAuthButtonProps) => {
     <div className="space-y-3">
       <div ref={buttonRef} className="flex justify-center" />
       {(configurationError || error) && (
-        <p className="text-sm text-red-600 text-center">
+        <p className="text-center text-sm text-danger">
           {configurationError || error}
         </p>
       )}

@@ -156,7 +156,7 @@ const WorkspaceDocumentsPage = () => {
           </div>
 
           {createError && !createError.includes("title") ? (
-            <p className="mt-4 text-sm text-red-600">{createError}</p>
+            <p className="mt-4 text-sm text-danger">{createError}</p>
           ) : null}
 
           <div className="mt-6 flex items-center justify-between gap-3">
@@ -196,14 +196,14 @@ const WorkspaceDocumentsPage = () => {
           ) : null}
 
           {!isLoading && loadError ? (
-            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
-              <p className="text-sm font-medium text-red-700">{loadError}</p>
+            <div className="mt-6 rounded-2xl border border-danger-border bg-danger-light p-6">
+              <p className="text-sm font-medium text-danger">{loadError}</p>
             </div>
           ) : null}
 
           {!isLoading && !loadError && deleteError ? (
-            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
-              <p className="text-sm font-medium text-red-700">{deleteError}</p>
+            <div className="mt-6 rounded-2xl border border-danger-border bg-danger-light p-6">
+              <p className="text-sm font-medium text-danger">{deleteError}</p>
             </div>
           ) : null}
 
