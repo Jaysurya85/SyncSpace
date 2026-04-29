@@ -5,6 +5,10 @@ Sprint 4 focused on completing backend task management support, strengthening ta
 - [Issues page](https://github.com/Jaysurya85/SyncSpace/issues?q=is%3Aissue)
 - [Project Board](https://github.com/users/Jaysurya85/projects/1)
 
+- [Backend demo video](https://youtu.be/njfAlji2Cy8?si=9Rdpo2X3N79j1bpr)
+- [Frontend demo video](https://youtu.be/0OEu8kJ_aEw?si=F-9hZ5p7JNM6Qj6L)
+
+
 # Backend
 ## Completed Work
 
