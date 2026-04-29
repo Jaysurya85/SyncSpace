@@ -4,8 +4,6 @@ import Input from "../../../shared/components/Input";
 import { useAuth } from "../../auth/useAuth";
 import { useWorkspaceShell } from "../../workspaces/workspaceShellContext";
 
-type InviteMode = "email" | "userId";
-
 const TeamPage = () => {
   const { user } = useAuth();
   const {
@@ -16,7 +14,6 @@ const TeamPage = () => {
     addWorkspaceMemberFromShell,
     removeWorkspaceMemberFromShell,
   } = useWorkspaceShell();
-  const [inviteMode, setInviteMode] = useState<InviteMode>("email");
   const [inviteValue, setInviteValue] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,11 +49,7 @@ const TeamPage = () => {
     const trimmedValue = inviteValue.trim();
 
     if (!trimmedValue) {
-      setSubmitError(
-        inviteMode === "email"
-          ? "An email address is required."
-          : "A user ID is required."
-      );
+      setSubmitError("An email address is required.");
       return;
     }
 
@@ -64,12 +57,9 @@ const TeamPage = () => {
       setIsSubmitting(true);
       setSubmitError(null);
 
-      await addWorkspaceMemberFromShell(
-        currentWorkspace.id,
-        inviteMode === "email"
-          ? { email: trimmedValue }
-          : { userId: trimmedValue }
-      );
+      await addWorkspaceMemberFromShell(currentWorkspace.id, {
+        email: trimmedValue,
+      });
 
       setInviteValue("");
     } catch (error) {
@@ -158,45 +148,19 @@ const TeamPage = () => {
               Invite someone into this workspace
             </h2>
             <p className="mt-2 text-sm leading-6 text-text-secondary">
-              Use email when the backend can resolve a user account from it. Use
-              user ID if you already have the exact identifier.
+              Add a teammate by email when the backend can resolve a user
+              account from it.
             </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              {(["email", "userId"] as InviteMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => {
-                    setInviteMode(mode);
-                    setInviteValue("");
-                    setSubmitError(null);
-                  }}
-                  className={[
-                    "rounded-full px-4 py-2 text-sm font-semibold transition",
-                    inviteMode === mode
-                      ? "bg-primary text-white"
-                      : "border border-border bg-background text-text-secondary hover:border-primary/20 hover:bg-primary-light/40 hover:text-text-primary",
-                  ].join(" ")}
-                >
-                  {mode === "email" ? "Add by email" : "Add by user ID"}
-                </button>
-              ))}
-            </div>
 
             <div className="mt-5">
               <Input
-                label={inviteMode === "email" ? "Member email" : "Member user ID"}
-                type={inviteMode === "email" ? "email" : "text"}
-                placeholder={
-                  inviteMode === "email" ? "user@example.com" : "user-2"
-                }
+                label="Member email"
+                type="email"
+                placeholder="user@example.com"
                 value={inviteValue}
                 onChange={(event) => setInviteValue(event.target.value)}
                 error={
-                  submitError &&
-                  (submitError.toLowerCase().includes("email") ||
-                    submitError.toLowerCase().includes("user"))
+                  submitError && submitError.toLowerCase().includes("email")
                     ? submitError
                     : undefined
                 }
@@ -204,8 +168,7 @@ const TeamPage = () => {
             </div>
 
             {submitError &&
-            !submitError.toLowerCase().includes("email") &&
-            !submitError.toLowerCase().includes("user") ? (
+            !submitError.toLowerCase().includes("email") ? (
               <p className="mt-4 text-sm text-danger">{submitError}</p>
             ) : null}
 
