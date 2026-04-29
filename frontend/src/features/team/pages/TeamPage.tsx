@@ -209,10 +209,7 @@ const TeamPage = () => {
               <p className="mt-4 text-sm text-danger">{submitError}</p>
             ) : null}
 
-            <div className="mt-6 flex items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.16em] text-text-muted">
-                POST /api/workspaces/{currentWorkspace.id}/members
-              </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
               <Button type="submit" loading={isSubmitting}>
                 Add member
               </Button>
@@ -291,7 +288,6 @@ const TeamPage = () => {
                         </p>
 
                         <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
-                          <span>ID {member.userId}</span>
                           <span>Joined {member.joinedAt}</span>
                         </div>
                       </div>

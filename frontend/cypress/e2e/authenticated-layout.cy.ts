@@ -1,8 +1,20 @@
 type WorkspaceFixture = {
   id: string;
   name: string;
+  owner_id: string;
   owner_name: string;
+  role: string;
+  created_at: string;
   updated_at: string;
+};
+
+type WorkspaceMemberFixture = {
+  workspace_id: string;
+  user_id: string;
+  email: string;
+  name: string;
+  role: string;
+  joined_at: string;
 };
 
 type DocumentFixture = {
@@ -25,9 +37,23 @@ const createWorkspace = (
 ): WorkspaceFixture => ({
   id,
   name,
+  owner_id: "e2e-user-1",
   owner_name: ownerName,
+  role: "owner",
+  created_at: "2026-04-12T10:00:00.000Z",
   updated_at: "2026-04-12T10:00:00.000Z",
 });
+
+const createWorkspaceMembers = (workspaceId: string): WorkspaceMemberFixture[] => [
+  {
+    workspace_id: workspaceId,
+    user_id: "e2e-user-1",
+    email: "cypress@example.com",
+    name: "Cypress User",
+    role: "owner",
+    joined_at: "2026-04-12T10:00:00.000Z",
+  },
+];
 
 const createDocument = (
   id: string,
@@ -174,6 +200,11 @@ const stubWorkspaceAndDocumentApi = ({
       body: documents.length === 0 ? null : documents,
     });
   }).as("getWorkspaceDocuments");
+
+  cy.intercept("GET", /.*\/api\/workspaces\/[^/]+\/members$/, (request) => {
+    const workspaceId = request.url.split("/").slice(-2, -1)[0] ?? "";
+    request.reply(createWorkspaceMembers(workspaceId));
+  }).as("getWorkspaceMembers");
 
   cy.intercept("POST", /.*\/api\/workspaces\/[^/]+\/documents$/, (request) => {
     const workspaceId = request.url.split("/").slice(-2, -1)[0] ?? "";
