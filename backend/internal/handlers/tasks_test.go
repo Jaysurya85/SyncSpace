@@ -163,6 +163,20 @@ func TestListTasksUnauthorized(t *testing.T) {
 	}
 }
 
+func TestListTasksRequiresWorkspaceID(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces//tasks", nil)
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.ListTasks(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 func TestListTasks(t *testing.T) {
 	handler := NewTaskHandler(&fakeTaskStore{
 		listFn: func(ctx context.Context, workspaceID, userID string) ([]tasks.Task, error) {
@@ -234,6 +248,36 @@ func TestListTasksByAssignee(t *testing.T) {
 	}
 }
 
+func TestListTasksByAssigneeUnauthorized(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces/ws-1/tasks/assignees/user-2", nil)
+	req.SetPathValue("workspace_id", "ws-1")
+	req.SetPathValue("assignee_id", "user-2")
+
+	rec := httptest.NewRecorder()
+	handler.ListTasksByAssignee(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestListTasksByAssigneeRequiresWorkspaceID(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces//tasks/assignees/user-2", nil)
+	req.SetPathValue("assignee_id", "user-2")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.ListTasksByAssignee(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 func TestListTasksByAssigneeRequiresAssignee(t *testing.T) {
 	handler := NewTaskHandler(&fakeTaskStore{})
 
@@ -265,6 +309,34 @@ func TestGetTaskNotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+}
+
+func TestGetTaskUnauthorized(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks/task-1", nil)
+	req.SetPathValue("task_id", "task-1")
+
+	rec := httptest.NewRecorder()
+	handler.GetTask(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestGetTaskRequiresTaskID(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks/", nil)
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.GetTask(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
 
@@ -335,6 +407,57 @@ func TestAssignTask(t *testing.T) {
 	}
 }
 
+func TestAssignTaskUnauthorized(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/api/tasks/task-1/assign",
+		strings.NewReader(`{"assigned_to":"user-2"}`),
+	)
+	req.SetPathValue("task_id", "task-1")
+
+	rec := httptest.NewRecorder()
+	handler.AssignTask(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestAssignTaskRequiresTaskID(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/api/tasks//assign",
+		strings.NewReader(`{"assigned_to":"user-2"}`),
+	)
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.AssignTask(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAssignTaskInvalidJSON(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/tasks/task-1/assign", strings.NewReader(`bad-json`))
+	req.SetPathValue("task_id", "task-1")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.AssignTask(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 func TestAssignTaskRequiresAssignee(t *testing.T) {
 	handler := NewTaskHandler(&fakeTaskStore{})
 
@@ -381,6 +504,49 @@ func TestUpdateTaskInvalidJSON(t *testing.T) {
 	handler := NewTaskHandler(&fakeTaskStore{})
 
 	req := httptest.NewRequest(http.MethodPut, "/api/tasks/task-1", strings.NewReader(`bad-json`))
+	req.SetPathValue("task_id", "task-1")
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.UpdateTask(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestUpdateTaskUnauthorized(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/tasks/task-1", strings.NewReader(`{}`))
+	req.SetPathValue("task_id", "task-1")
+
+	rec := httptest.NewRecorder()
+	handler.UpdateTask(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestUpdateTaskRequiresTaskID(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/tasks/", strings.NewReader(`{}`))
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.UpdateTask(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestUpdateTaskRequiresTitle(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/tasks/task-1", strings.NewReader(`{"title":"   "}`))
 	req.SetPathValue("task_id", "task-1")
 	req = authContext(req, "user-1")
 
@@ -446,6 +612,34 @@ func TestDeleteTask(t *testing.T) {
 	}
 }
 
+func TestDeleteTaskUnauthorized(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/tasks/task-1", nil)
+	req.SetPathValue("task_id", "task-1")
+
+	rec := httptest.NewRecorder()
+	handler.DeleteTask(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestDeleteTaskRequiresTaskID(t *testing.T) {
+	handler := NewTaskHandler(&fakeTaskStore{})
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/tasks/", nil)
+	req = authContext(req, "user-1")
+
+	rec := httptest.NewRecorder()
+	handler.DeleteTask(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 func TestDeleteTaskForbidden(t *testing.T) {
 	handler := NewTaskHandler(&fakeTaskStore{
 		deleteFn: func(ctx context.Context, taskID, userID string) error {
@@ -485,5 +679,22 @@ func TestCreateTaskInternalError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rec.Code)
+	}
+}
+
+func TestNormalizeOptionalString(t *testing.T) {
+	if got := normalizeOptionalString(nil); got != nil {
+		t.Fatalf("expected nil, got %v", got)
+	}
+
+	blank := "   "
+	if got := normalizeOptionalString(&blank); got != nil {
+		t.Fatalf("expected nil for blank value, got %v", got)
+	}
+
+	value := " user-1 "
+	got := normalizeOptionalString(&value)
+	if got == nil || *got != "user-1" {
+		t.Fatalf("expected trimmed value, got %v", got)
 	}
 }
